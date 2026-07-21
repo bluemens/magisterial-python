@@ -97,8 +97,8 @@ class AlertSummary(BaseModel):
     name: str = Field(..., title="Name")
     sport_path: str | None = Field(None, title="Sport Path")
     webhook_delivery: str | None = Field(
-        "coming_soon",
-        description="Webhook delivery is not yet live; poll GET /v1/alerts/{id}/matches.",
+        "no_endpoint_registered",
+        description="'enabled' when at least one enabled webhook endpoint in the console is subscribed to alert.triggered (and matches webhook_url, if set); otherwise 'no_endpoint_registered'. Register endpoints in the console; polling GET /v1/alerts/{id}/matches always works.",
         title="Webhook Delivery",
     )
     webhook_url: str | None = Field(None, title="Webhook Url")
@@ -142,15 +142,206 @@ class ApiErrorResponse(BaseModel):
     error: ApiErrorDetail
 
 
+class ExportCreateRequest(BaseModel):
+    """
+    Body for POST /v1/exports (usage-billed by result size).
+
+    One export = one dataset in one sport/division scope, written as a single
+    gzipped flat file. Use the optional filters to keep large datasets under
+    the row cap.
+    """
+
+    conference: str | None = Field(
+        None,
+        description="Conference filter (players/teams/coaches).",
+        title="Conference",
+    )
+    dataset: str = Field(
+        ..., description="'players' | 'teams' | 'games' | 'coaches'.", title="Dataset"
+    )
+    division: str = Field(
+        ..., description="Division scope, e.g. 'D1'.", title="Division"
+    )
+    format: str | None = Field(
+        "csv",
+        description="'csv' or 'jsonl'; the file is always gzipped.",
+        title="Format",
+    )
+    gender: str | None = Field(
+        None,
+        description="'men' or 'women'; ignored for single-gender sports.",
+        title="Gender",
+    )
+    season: str | None = Field(
+        None,
+        description="Season filter (championship year, e.g. '2025').",
+        title="Season",
+    )
+    sport: str = Field(
+        ..., description="e.g. 'soccer', 'basketball', 'baseball'.", title="Sport"
+    )
+
+
+class ExportCreateResponse(BaseModel):
+    """
+    Acknowledgement for POST /v1/exports; poll GET /v1/exports/{export_id}.
+    """
+
+    export_id: str = Field(
+        ..., examples=["b3f9c1d2-4a5e-4f6b-8c7d-9e0f1a2b3c4d"], title="Export Id"
+    )
+    status: str = Field(..., examples=["queued"], title="Status")
+
+
+class ExportJobStatus(BaseModel):
+    """
+    Status of an export job. `download_url` appears once the job succeeds and
+    is minted fresh (short-lived) on every status read; re-poll for a new one.
+    The stored file itself expires at `expires_at`.
+    """
+
+    billed_usd: float | None = Field(
+        None,
+        description="Amount billed for this export; present once billing lands.",
+        title="Billed Usd",
+    )
+    bytes: int | None = Field(None, description="Compressed file size.", title="Bytes")
+    created_at: AwareDatetime | None = Field(None, title="Created At")
+    dataset: str = Field(..., title="Dataset")
+    download_expires_at: AwareDatetime | None = Field(
+        None,
+        description="When `download_url` stops working; poll again for a fresh one.",
+        title="Download Expires At",
+    )
+    download_url: str | None = Field(
+        None,
+        description="Short-lived signed download URL; present while status is 'succeeded'.",
+        title="Download Url",
+    )
+    error: str | None = Field(
+        None, description="Failure detail when status is 'failed'.", title="Error"
+    )
+    expires_at: AwareDatetime | None = Field(
+        None,
+        description="When the stored file is deleted (status becomes 'expired').",
+        title="Expires At",
+    )
+    export_id: str = Field(..., title="Export Id")
+    finished_at: AwareDatetime | None = Field(None, title="Finished At")
+    format: str = Field(..., title="Format")
+    params: dict[str, Any] | None = Field(
+        None, description="Echo of the requested scope and filters.", title="Params"
+    )
+    row_count: int | None = Field(None, title="Row Count")
+    started_at: AwareDatetime | None = Field(None, title="Started At")
+    status: str = Field(
+        ...,
+        description="queued | running | succeeded | failed | expired",
+        title="Status",
+    )
+
+
+class ExportListPage(BaseModel):
+    """
+    One page of export jobs (newest first).
+    """
+
+    data: list[ExportJobStatus] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
+    )
+
+
+class GameFixture(BaseModel):
+    """
+    One game as listed by GET /v1/games — a side-anchored fixture (home/away,
+    never perspective-relative). A game between teams in different divisions is
+    visible in either division's scope.
+    """
+
+    attendance: int | None = Field(None, title="Attendance")
+    away_conference_record: str | None = Field(None, title="Away Conference Record")
+    away_period_scores: Any = Field(None, title="Away Period Scores")
+    away_score: int | None = Field(None, title="Away Score")
+    away_team_id: int | None = Field(None, title="Away Team Id")
+    away_team_name: str | None = Field(None, title="Away Team Name")
+    away_team_record: str | None = Field(None, title="Away Team Record")
+    boxscore_url: str | None = Field(None, title="Boxscore Url")
+    game_date: str | None = Field(
+        None, description="ISO date, e.g. '2025-10-18'.", title="Game Date"
+    )
+    game_time: str | None = Field(None, title="Game Time")
+    home_conference_record: str | None = Field(None, title="Home Conference Record")
+    home_period_scores: Any = Field(
+        None, description="Line score by period/segment.", title="Home Period Scores"
+    )
+    home_score: int | None = Field(None, title="Home Score")
+    home_team_id: int | None = Field(
+        None,
+        description="Team id; use with GET /v1/teams/{team_id}.",
+        title="Home Team Id",
+    )
+    home_team_name: str | None = Field(None, title="Home Team Name")
+    home_team_record: str | None = Field(
+        None, description="Record at time of game.", title="Home Team Record"
+    )
+    id: int | None = Field(
+        None, description="Game id; use with GET /v1/games/{game_id}.", title="Id"
+    )
+    location: str | None = Field(None, title="Location")
+    neutral_site: bool | None = Field(None, title="Neutral Site")
+    season: str | None = Field(
+        None, description="Championship year, e.g. '2025'.", title="Season"
+    )
+    sport_path: str | None = Field(
+        None, description="Gendered sport key, e.g. 'mens-soccer'.", title="Sport Path"
+    )
+    status: str | None = Field(
+        None,
+        description="scheduled | final | postponed | cancelled | forfeit",
+        title="Status",
+    )
+    venue: str | None = Field(None, title="Venue")
+    winner_team_id: int | None = Field(
+        None,
+        description="Null for ties (or an untracked winner).",
+        title="Winner Team Id",
+    )
+
+
+class GamePage(BaseModel):
+    """
+    One page of games.
+    """
+
+    data: list[GameFixture] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
+    )
+
+
 class GameSummary(BaseModel):
     """
-    A game/fixture with whatever box-score / play-by-play the internal
-    fetch returned, passed through under `detail`.
+    A game with everything held for it, passed through under `detail`:
+    the fixture (`detail.game`), team/player box scores, play-by-play, and
+    (where covered) drives and recaps. Per-sport shapes vary.
     """
 
     detail: dict[str, Any] | None = Field(
         None,
-        description="Complete game payload: teams, score, and (when held) box score and play-by-play. Shape varies by sport.",
+        description="Complete game payload: `game` (the fixture), `team_stats`, `player_stats`, `play_by_play`, and per-sport extras (drives, recaps). Shape varies by sport.",
         title="Detail",
     )
     id: Any = Field(None, description="Game id as requested.", title="Id")
@@ -491,6 +682,57 @@ class StringListResponse(BaseModel):
 
     data: list[str] = Field(
         ..., examples=[["D1", "D2", "D3", "NAIA", "NJCAA"]], title="Data"
+    )
+
+
+class TeamCoachEntry(BaseModel):
+    """
+    One member of a team's coaching staff for a season. `email` is populated
+    only for callers whose owning account is PRO/MAX for the sport — the same
+    paid-tier carve-out the portal contacts use.
+    """
+
+    bio_url: str | None = Field(
+        None, description="Coach bio page on the school site.", title="Bio Url"
+    )
+    email: str | None = Field(
+        None, description="Coach email; PRO/MAX tier only, else null.", title="Email"
+    )
+    headshot_url: str | None = Field(None, title="Headshot Url")
+    id: int | None = Field(None, description="Coach id.", title="Id")
+    is_head_coach: bool | None = Field(None, title="Is Head Coach")
+    name: str | None = Field(None, title="Name")
+    person_id: int | None = Field(
+        None,
+        description="Cross-school person cluster id, when linked.",
+        title="Person Id",
+    )
+    profile_slug: str | None = Field(
+        None,
+        description="Public profile slug on magisterial.ai, when minted.",
+        title="Profile Slug",
+    )
+    role: str | None = Field(
+        None,
+        description="Staff title as published, e.g. 'Assistant Coach'.",
+        title="Role",
+    )
+    season: str | None = Field(
+        None, description="Season this staff row belongs to.", title="Season"
+    )
+
+
+class TeamCoachesResponse(BaseModel):
+    """
+    Envelope for GET /v1/teams/{team_id}/coaches. `season` is the season the
+    staff list belongs to (the latest one held unless `season` was requested).
+    """
+
+    data: list[TeamCoachEntry] = Field(..., title="Data")
+    season: str | None = Field(
+        None,
+        description="Season of the returned staff; null when no staff is held.",
+        title="Season",
     )
 
 

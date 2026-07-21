@@ -5,7 +5,14 @@ from __future__ import annotations
 from typing import Optional
 
 from .._pagination import AsyncPage, SyncPage
-from ..types import RosterEntry, RosterPage, TeamDetail, TeamPage, TeamSummary
+from ..types import (
+    RosterEntry,
+    RosterPage,
+    TeamCoachesResponse,
+    TeamDetail,
+    TeamPage,
+    TeamSummary,
+)
 
 
 class Teams:
@@ -88,6 +95,26 @@ class Teams:
 
         return fetch(cursor)
 
+    def coaches(
+        self,
+        team_id: int,
+        *,
+        sport: str,
+        division: str,
+        gender: Optional[str] = None,
+        season: Optional[str] = None,
+    ) -> TeamCoachesResponse:
+        """A team's coaching staff for a season (defaults to the most recent
+        season on record)."""
+        return self._client.get_model(
+            f"/v1/teams/{team_id}/coaches",
+            TeamCoachesResponse,
+            sport=sport,
+            division=division,
+            gender=gender,
+            season=season,
+        )
+
 
 class AsyncTeams:
     def __init__(self, client) -> None:
@@ -168,3 +195,23 @@ class AsyncTeams:
             return AsyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch)
 
         return await fetch(cursor)
+
+    async def coaches(
+        self,
+        team_id: int,
+        *,
+        sport: str,
+        division: str,
+        gender: Optional[str] = None,
+        season: Optional[str] = None,
+    ) -> TeamCoachesResponse:
+        """A team's coaching staff for a season (defaults to the most recent
+        season on record)."""
+        return await self._client.get_model(
+            f"/v1/teams/{team_id}/coaches",
+            TeamCoachesResponse,
+            sport=sport,
+            division=division,
+            gender=gender,
+            season=season,
+        )

@@ -10,6 +10,7 @@ from ._exceptions import (
     AuthenticationError,
     BadRequestError,
     BillingError,
+    ExportPollTimeout,
     InternalServerError,
     MagisterialError,
     NotFoundError,
@@ -40,5 +41,6 @@ __all__ = [
     "RateLimitError",
     "InternalServerError",
     "QueryPollTimeout",
+    "ExportPollTimeout",
     "__version__",
 ]

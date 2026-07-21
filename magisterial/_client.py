@@ -104,6 +104,7 @@ class Magisterial:
         self._http = http_client or httpx.Client(timeout=timeout)
 
         from .resources.alerts import Alerts
+        from .resources.exports import Exports
         from .resources.games import Games
         from .resources.persons import Persons
         from .resources.players import Players
@@ -120,6 +121,7 @@ class Magisterial:
         self.portal = Portal(self)
         self.query = Query(self)
         self.alerts = Alerts(self)
+        self.exports = Exports(self)
 
     # -- transport ---------------------------------------------------------
 
@@ -214,6 +216,7 @@ class AsyncMagisterial:
         self._http = http_client or httpx.AsyncClient(timeout=timeout)
 
         from .resources.alerts import AsyncAlerts
+        from .resources.exports import AsyncExports
         from .resources.games import AsyncGames
         from .resources.persons import AsyncPersons
         from .resources.players import AsyncPlayers
@@ -230,6 +233,7 @@ class AsyncMagisterial:
         self.portal = AsyncPortal(self)
         self.query = AsyncQuery(self)
         self.alerts = AsyncAlerts(self)
+        self.exports = AsyncExports(self)
 
     # -- transport ---------------------------------------------------------
 

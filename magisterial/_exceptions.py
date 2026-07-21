@@ -45,6 +45,22 @@ class QueryPollTimeout(MagisterialError):
         )
 
 
+class ExportPollTimeout(MagisterialError):
+    """create_and_poll gave up before the export job reached a terminal state.
+
+    The job keeps executing server-side; fetch it later with
+    ``client.exports.get(export_id)``.
+    """
+
+    def __init__(self, export_id: str, last_status: str, timeout: float) -> None:
+        self.export_id = export_id
+        self.last_status = last_status
+        super().__init__(
+            f"Export {export_id} still '{last_status}' after {timeout:.0f}s; "
+            f"poll client.exports.get({export_id!r}) to retrieve it later."
+        )
+
+
 class APIStatusError(MagisterialError):
     """A non-2xx response from the API."""
 

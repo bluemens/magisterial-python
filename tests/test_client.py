@@ -205,6 +205,74 @@ def test_page_iteration_without_following():
     assert page.has_more and page.next_cursor == "c2"
 
 
+# -- 0.2.0 endpoints -----------------------------------------------------------
+
+
+def test_games_list_paginates():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["sport"] == "soccer"
+        return json_response(
+            200,
+            {
+                "data": [{"id": 9001, "home_team_name": "Amherst", "away_team_name": "Tufts", "status": "final"}],
+                "next_cursor": None,
+                "has_more": False,
+            },
+        )
+
+    client = make_client(handler)
+    page = client.games.list(sport="soccer", division="D3", status="final")
+    assert page.data[0].home_team_name == "Amherst"
+
+
+def test_team_coaches():
+    client = make_client(
+        lambda req: json_response(
+            200, {"season": "2025-26", "data": [{"name": "Sam Blake", "role": "Head Coach"}]}
+        )
+    )
+    staff = client.teams.coaches(1873, sport="soccer", division="D3")
+    assert staff.season == "2025-26"
+    assert staff.data[0].name == "Sam Blake"
+
+
+def test_export_create_and_poll(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    statuses = iter(["queued", "running", "succeeded"])
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return json_response(202, {"export_id": "e1", "status": "queued"})
+        return json_response(
+            200,
+            {
+                "export_id": "e1",
+                "status": next(statuses),
+                "dataset": "players",
+                "format": "csv",
+                "download_url": "https://example.com/f.csv.gz",
+            },
+        )
+
+    client = make_client(handler)
+    job = client.exports.create_and_poll(dataset="players", sport="soccer", division="D3")
+    assert job.status == "succeeded"
+    assert job.download_url is not None
+
+
+def test_export_create_not_retried():
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return json_response(429, _error_body("rate_limited", "rate_limit_exceeded", "Slow down."))
+
+    client = make_client(handler)
+    with pytest.raises(RateLimitError):
+        client.exports.create(dataset="players", sport="soccer", division="D3")
+    assert calls["n"] == 1  # billable create: no auto-retry
+
+
 # -- query polling -------------------------------------------------------------
 
 
