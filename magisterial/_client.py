@@ -106,6 +106,7 @@ class Magisterial:
         from .resources.alerts import Alerts
         from .resources.exports import Exports
         from .resources.games import Games
+        from .resources.movements import Movements
         from .resources.persons import Persons
         from .resources.players import Players
         from .resources.portal import Portal
@@ -117,6 +118,7 @@ class Magisterial:
         self.players = Players(self)
         self.teams = Teams(self)
         self.persons = Persons(self)
+        self.movements = Movements(self)
         self.games = Games(self)
         self.portal = Portal(self)
         self.query = Query(self)
@@ -218,6 +220,7 @@ class AsyncMagisterial:
         from .resources.alerts import AsyncAlerts
         from .resources.exports import AsyncExports
         from .resources.games import AsyncGames
+        from .resources.movements import AsyncMovements
         from .resources.persons import AsyncPersons
         from .resources.players import AsyncPlayers
         from .resources.portal import AsyncPortal
@@ -229,6 +232,7 @@ class AsyncMagisterial:
         self.players = AsyncPlayers(self)
         self.teams = AsyncTeams(self)
         self.persons = AsyncPersons(self)
+        self.movements = AsyncMovements(self)
         self.games = AsyncGames(self)
         self.portal = AsyncPortal(self)
         self.query = AsyncQuery(self)

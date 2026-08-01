@@ -347,6 +347,31 @@ class GameSummary(BaseModel):
     id: Any = Field(None, description="Game id as requested.", title="Id")
 
 
+class MovementSubject(BaseModel):
+    """
+    Display snapshot of the person a movement is about, taken from the
+    event payload at observation time. Contact fields are never included.
+    """
+
+    class_year: str | None = Field(
+        None, description="Players only.", title="Class Year"
+    )
+    from_title: str | None = Field(
+        None, description="Coaches, title changes only.", title="From Title"
+    )
+    is_head: bool | None = Field(
+        None, description="Coaches only — head-coach role.", title="Is Head"
+    )
+    name: str | None = Field(None, title="Name")
+    position: str | None = Field(None, description="Players only.", title="Position")
+    title: str | None = Field(
+        None, description="Coaches only — current title.", title="Title"
+    )
+    to_title: str | None = Field(
+        None, description="Coaches, title changes only.", title="To Title"
+    )
+
+
 class PlayerDetail(BaseModel):
     """
     A single player's profile with season stats, accolades, and (when the
@@ -819,6 +844,61 @@ class AlertListResponse(BaseModel):
 
 class HTTPValidationError(BaseModel):
     detail: list[ValidationError] | None = Field(None, title="Detail")
+
+
+class MovementEntry(BaseModel):
+    """
+    One published roster/coaching movement event. Only events an editor (or
+    the auto-publish policy) published appear here — a curated feed, not the
+    raw diff stream.
+    """
+
+    division: str | None = Field(None, title="Division")
+    event_type: str = Field(
+        ...,
+        description="player_added | player_removed | coach_added | coach_removed | title_changed",
+        title="Event Type",
+    )
+    id: int = Field(..., title="Id")
+    kind: str = Field(..., description="'player' or 'coach'.", title="Kind")
+    observed_at: AwareDatetime | None = Field(None, title="Observed At")
+    person_id: int | None = Field(
+        None,
+        description="Linked person, when the movement was resolved to one.",
+        title="Person Id",
+    )
+    published_at: AwareDatetime | None = Field(None, title="Published At")
+    resolution_kind: str | None = Field(
+        None, description="e.g. 'head_coach_change_confirmed'.", title="Resolution Kind"
+    )
+    school_logo_url: str | None = Field(None, title="School Logo Url")
+    school_name: str | None = Field(None, title="School Name")
+    season: str | None = Field(None, title="Season")
+    sport_path: str | None = Field(None, title="Sport Path")
+    subject: MovementSubject
+    team_id: int | None = Field(None, title="Team Id")
+    transfer_id: int | None = Field(
+        None,
+        description="Transfer edge minted by this movement (players).",
+        title="Transfer Id",
+    )
+
+
+class MovementPage(BaseModel):
+    """
+    One page of published movements.
+    """
+
+    data: list[MovementEntry] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
+    )
 
 
 class PlayerSearchPage(BaseModel):

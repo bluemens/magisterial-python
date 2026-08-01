@@ -225,6 +225,35 @@ def test_games_list_paginates():
     assert page.data[0].home_team_name == "Amherst"
 
 
+def test_movements_list_paginates():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/movements"
+        assert request.url.params["kind"] == "coach"
+        assert request.url.params["sport_path"] == "womens-soccer"
+        return json_response(
+            200,
+            {
+                "data": [{
+                    "id": 59, "kind": "coach", "event_type": "title_changed",
+                    "sport_path": "womens-soccer", "season": "2027",
+                    "school_name": "Macalester College",
+                    "subject": {"name": "Marissa Olson-Guillou",
+                                "to_title": "Head Coach", "is_head": True},
+                    "resolution_kind": "head_coach_change_confirmed",
+                }],
+                "next_cursor": None,
+                "has_more": False,
+            },
+        )
+
+    client = make_client(handler)
+    page = client.movements.list(kind="coach", sport_path="womens-soccer")
+    entry = page.data[0]
+    assert entry.subject.name == "Marissa Olson-Guillou"
+    assert entry.resolution_kind == "head_coach_change_confirmed"
+    assert not page.has_more
+
+
 def test_team_coaches():
     client = make_client(
         lambda req: json_response(
