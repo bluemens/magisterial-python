@@ -14,7 +14,9 @@ class AlertCreateRequest(BaseModel):
     """
 
     division: str = Field(
-        ..., description="Division scope, e.g. 'D1'.", title="Division"
+        ...,
+        description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
+        title="Division",
     )
     enabled: bool | None = Field(
         True, description="Create the alert paused by setting false.", title="Enabled"
@@ -160,7 +162,9 @@ class ExportCreateRequest(BaseModel):
         ..., description="'players' | 'teams' | 'games' | 'coaches'.", title="Dataset"
     )
     division: str = Field(
-        ..., description="Division scope, e.g. 'D1'.", title="Division"
+        ...,
+        description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
+        title="Division",
     )
     format: str | None = Field(
         "csv",
@@ -427,7 +431,7 @@ class PlayerSearchRequest(BaseModel):
     )
     division: str = Field(
         ...,
-        description="Division scope; may be a comma-joined NCAA list, e.g. 'D1,D2'.",
+        description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
         title="Division",
     )
     gender: str | None = Field(
@@ -593,7 +597,9 @@ class PublicQueryRequest(BaseModel):
     """
 
     division: str | None = Field(
-        "D1", description="Division scope, e.g. 'D1'.", title="Division"
+        "D1",
+        description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
+        title="Division",
     )
     gender: str | None = Field(
         None,
@@ -706,7 +712,10 @@ class StringListResponse(BaseModel):
     """
 
     data: list[str] = Field(
-        ..., examples=[["D1", "D2", "D3", "NAIA", "NJCAA"]], title="Data"
+        ...,
+        description="String values returned by the reference endpoint.",
+        examples=[["D1", "D1-FBS", "D1-FCS", "D2", "D3", "NAIA", "NJCAA-D1"]],
+        title="Data",
     )
 
 

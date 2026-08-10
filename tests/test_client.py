@@ -187,11 +187,13 @@ def test_search_auto_pagination_follows_cursor():
         )
 
     client = make_client(handler)
-    page = client.players.search(sport="soccer", division="D1", limit=2)
+    mixed_scope = "D1,NAIA,NJCAA-D1"
+    page = client.players.search(sport="soccer", division=mixed_scope, limit=2)
     names = [p.name for p in page.auto_paging_iter()]
     assert names == ["Player 1", "Player 2", "Player 3"]
     # Original filters survive into the cursor-following request.
     assert bodies[1]["sport"] == "soccer" and bodies[1]["limit"] == 2
+    assert bodies[1]["division"] == mixed_scope
 
 
 def test_page_iteration_without_following():
