@@ -207,6 +207,59 @@ def test_page_iteration_without_following():
     assert page.has_more and page.next_cursor == "c2"
 
 
+def test_team_roster_season_survives_pagination():
+    queries = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        query = dict(request.url.params)
+        queries.append(query)
+        assert request.url.path == "/v1/teams/1873/roster"
+        if query.get("cursor") is None:
+            return json_response(
+                200,
+                {
+                    "season": "2026",
+                    "data": [{"id": 1, "name": "Player 1"}],
+                    "next_cursor": "c2",
+                    "has_more": True,
+                },
+            )
+        return json_response(
+            200,
+            {
+                "season": "2026",
+                "data": [{"id": 2, "name": "Player 2"}],
+                "next_cursor": None,
+                "has_more": False,
+            },
+        )
+
+    client = make_client(handler)
+    page = client.teams.roster(
+        1873,
+        sport="soccer",
+        division="D3",
+        season="2026",
+        limit=1,
+    )
+    assert page.season == "2026"
+
+    next_page = page.next_page()
+    assert next_page is not None
+    assert next_page.season == "2026"
+    assert [entry.name for entry in next_page.data] == ["Player 2"]
+    assert queries == [
+        {"sport": "soccer", "division": "D3", "season": "2026", "limit": "1"},
+        {
+            "sport": "soccer",
+            "division": "D3",
+            "season": "2026",
+            "limit": "1",
+            "cursor": "c2",
+        },
+    ]
+
+
 # -- 0.2.0 endpoints -----------------------------------------------------------
 
 
@@ -363,6 +416,35 @@ async def test_async_client_basic_flow():
     page = await client.players.search(sport="soccer", division="D1")
     items = [p async for p in page.auto_paging_iter()]
     assert [p.name for p in items] == ["Player 1"]
+    await client.close()
+
+
+@pytest.mark.anyio
+async def test_async_team_roster_exposes_season():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/teams/1873/roster"
+        assert request.url.params["season"] == "2026"
+        return json_response(
+            200,
+            {
+                "season": "2026",
+                "data": [{"id": 1, "name": "Player 1"}],
+                "next_cursor": None,
+                "has_more": False,
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    client = magisterial.AsyncMagisterial(
+        api_key=API_KEY, http_client=httpx.AsyncClient(transport=transport)
+    )
+    page = await client.teams.roster(
+        1873,
+        sport="soccer",
+        division="D3",
+        season="2026",
+    )
+    assert page.season == "2026"
     await client.close()
 
 

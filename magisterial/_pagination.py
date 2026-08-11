@@ -28,10 +28,13 @@ class SyncPage(Generic[T]):
         next_cursor: Optional[str],
         has_more: bool,
         fetch_next: Callable[[str], "SyncPage[T]"],
+        *,
+        season: Optional[str] = None,
     ) -> None:
         self.data = data
         self.next_cursor = next_cursor
         self.has_more = has_more
+        self.season = season
         self._fetch_next = fetch_next
 
     def __iter__(self) -> Iterator[T]:
@@ -66,10 +69,13 @@ class AsyncPage(Generic[T]):
         next_cursor: Optional[str],
         has_more: bool,
         fetch_next: Callable[[str], Awaitable["AsyncPage[T]"]],
+        *,
+        season: Optional[str] = None,
     ) -> None:
         self.data = data
         self.next_cursor = next_cursor
         self.has_more = has_more
+        self.season = season
         self._fetch_next = fetch_next
 
     def __iter__(self) -> Iterator[T]:
