@@ -73,10 +73,11 @@ class Teams:
         sport: str,
         division: str,
         gender: Optional[str] = None,
+        season: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> SyncPage[RosterEntry]:
-        """A team's roster (identity fields only)."""
+        """A team's roster for a season (identity fields only)."""
 
         def fetch(c: Optional[str]) -> SyncPage[RosterEntry]:
             raw = self._client.request(
@@ -86,12 +87,19 @@ class Teams:
                     "sport": sport,
                     "division": division,
                     "gender": gender,
+                    "season": season,
                     "limit": limit,
                     "cursor": c,
                 },
             )
             parsed = RosterPage.model_validate(raw)
-            return SyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch)
+            return SyncPage(
+                parsed.data,
+                parsed.next_cursor,
+                parsed.has_more,
+                fetch,
+                season=parsed.season,
+            )
 
         return fetch(cursor)
 
@@ -174,10 +182,11 @@ class AsyncTeams:
         sport: str,
         division: str,
         gender: Optional[str] = None,
+        season: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> AsyncPage[RosterEntry]:
-        """A team's roster (identity fields only)."""
+        """A team's roster for a season (identity fields only)."""
 
         async def fetch(c: Optional[str]) -> AsyncPage[RosterEntry]:
             raw = await self._client.request(
@@ -187,12 +196,19 @@ class AsyncTeams:
                     "sport": sport,
                     "division": division,
                     "gender": gender,
+                    "season": season,
                     "limit": limit,
                     "cursor": c,
                 },
             )
             parsed = RosterPage.model_validate(raw)
-            return AsyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch)
+            return AsyncPage(
+                parsed.data,
+                parsed.next_cursor,
+                parsed.has_more,
+                fetch,
+                season=parsed.season,
+            )
 
         return await fetch(cursor)
 

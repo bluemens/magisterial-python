@@ -14,7 +14,9 @@ class AlertCreateRequest(BaseModel):
     """
 
     division: str = Field(
-        ..., description="Division scope, e.g. 'D1'.", title="Division"
+        ...,
+        description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
+        title="Division",
     )
     enabled: bool | None = Field(
         True, description="Create the alert paused by setting false.", title="Enabled"
@@ -160,7 +162,9 @@ class ExportCreateRequest(BaseModel):
         ..., description="'players' | 'teams' | 'games' | 'coaches'.", title="Dataset"
     )
     division: str = Field(
-        ..., description="Division scope, e.g. 'D1'.", title="Division"
+        ...,
+        description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
+        title="Division",
     )
     format: str | None = Field(
         "csv",
@@ -427,7 +431,7 @@ class PlayerSearchRequest(BaseModel):
     )
     division: str = Field(
         ...,
-        description="Division scope; may be a comma-joined NCAA list, e.g. 'D1,D2'.",
+        description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
         title="Division",
     )
     gender: str | None = Field(
@@ -521,14 +525,14 @@ class PlayerSummary(BaseModel):
 class PortalEntry(BaseModel):
     """
     One live transfer-portal entry. `contacts` is present only for callers
-    whose owning account is PRO/MAX for the sport — the sole deliberate
-    exception to the no-contact-info rule, matching the in-app portal paywall.
+    whose key delegates `portal.contact.read` and whose current actor is an
+    active verified coach on a Max account for the requested sport.
     """
 
     conference: str | None = Field(None, title="Conference")
     contacts: dict[str, Any] | None = Field(
         None,
-        description="Contact info (email/phone/social); PRO/MAX tier only.",
+        description="Protected athlete contact info (email/phone/social); requires portal.contact.read plus current active verified coach and Max sport authority.",
         title="Contacts",
     )
     designated_student_athlete: bool | None = Field(
@@ -593,7 +597,9 @@ class PublicQueryRequest(BaseModel):
     """
 
     division: str | None = Field(
-        "D1", description="Division scope, e.g. 'D1'.", title="Division"
+        "D1",
+        description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
+        title="Division",
     )
     gender: str | None = Field(
         None,
@@ -668,7 +674,7 @@ class RosterEntry(BaseModel):
 
 class RosterPage(BaseModel):
     """
-    One page of roster members.
+    One page of roster members from one season.
     """
 
     data: list[RosterEntry] = Field(..., title="Data")
@@ -680,6 +686,11 @@ class RosterPage(BaseModel):
         description="Opaque cursor for the next page; null when there are no more results.",
         examples=["eyJvZmZzZXQiOiAyNX0="],
         title="Next Cursor",
+    )
+    season: str | None = Field(
+        None,
+        description="Season of the returned roster; null when no roster is held.",
+        title="Season",
     )
 
 
@@ -706,22 +717,27 @@ class StringListResponse(BaseModel):
     """
 
     data: list[str] = Field(
-        ..., examples=[["D1", "D2", "D3", "NAIA", "NJCAA"]], title="Data"
+        ...,
+        description="String values returned by the reference endpoint.",
+        examples=[["D1", "D1-FBS", "D1-FCS", "D2", "D3", "NAIA", "NJCAA-D1"]],
+        title="Data",
     )
 
 
 class TeamCoachEntry(BaseModel):
     """
     One member of a team's coaching staff for a season. `email` is populated
-    only for callers whose owning account is PRO/MAX for the sport — the same
-    paid-tier carve-out the portal contacts use.
+    only when the key delegates `outreach.coach.read` and the current actor's
+    verified player role permits player-to-coach outreach for the sport.
     """
 
     bio_url: str | None = Field(
         None, description="Coach bio page on the school site.", title="Bio Url"
     )
     email: str | None = Field(
-        None, description="Coach email; PRO/MAX tier only, else null.", title="Email"
+        None,
+        description="Coach email; requires exact outreach.coach.read delegation and current verified player-role authority, else null.",
+        title="Email",
     )
     headshot_url: str | None = Field(None, title="Headshot Url")
     id: int | None = Field(None, description="Coach id.", title="Id")

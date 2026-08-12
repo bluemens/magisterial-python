@@ -29,7 +29,7 @@ client = Magisterial()
 
 # Search players (auto-pagination follows the cursor for you)
 page = client.players.search(
-    sport="soccer", division="D1", gender="women",
+    sport="soccer", division="D1,NAIA,NJCAA-D1", gender="women",
     position="Forward", sort_by="goals",
 )
 for player in page.auto_paging_iter():
