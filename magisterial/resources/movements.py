@@ -18,13 +18,18 @@ class Movements:
         kind: Optional[str] = None,
         sport_path: Optional[str] = None,
         since: Optional[str] = None,
+        status: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> SyncPage[MovementEntry]:
         """Published roster and coaching-staff movements, newest first.
 
         Cross-division; no scope parameters. `kind` filters to 'player' or
-        'coach'; `since` is an ISO datetime lower bound on publish time."""
+        'coach'; `since` is an ISO datetime lower bound on publish time.
+        `status` selects the feed tier: 'published' (curated, every plan,
+        the default), 'resolved' (identity resolution finished; Enterprise),
+        or 'observed' (every non-dismissed event including pending ones;
+        Enterprise)."""
 
         def fetch(c: Optional[str]) -> SyncPage[MovementEntry]:
             raw = self._client.request(
@@ -34,6 +39,7 @@ class Movements:
                     "kind": kind,
                     "sport_path": sport_path,
                     "since": since,
+                    "status": status,
                     "limit": limit,
                     "cursor": c,
                 },
@@ -54,13 +60,18 @@ class AsyncMovements:
         kind: Optional[str] = None,
         sport_path: Optional[str] = None,
         since: Optional[str] = None,
+        status: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> AsyncPage[MovementEntry]:
         """Published roster and coaching-staff movements, newest first.
 
         Cross-division; no scope parameters. `kind` filters to 'player' or
-        'coach'; `since` is an ISO datetime lower bound on publish time."""
+        'coach'; `since` is an ISO datetime lower bound on publish time.
+        `status` selects the feed tier: 'published' (curated, every plan,
+        the default), 'resolved' (identity resolution finished; Enterprise),
+        or 'observed' (every non-dismissed event including pending ones;
+        Enterprise)."""
 
         async def fetch(c: Optional[str]) -> AsyncPage[MovementEntry]:
             raw = await self._client.request(
@@ -70,6 +81,7 @@ class AsyncMovements:
                     "kind": kind,
                     "sport_path": sport_path,
                     "since": since,
+                    "status": status,
                     "limit": limit,
                     "cursor": c,
                 },

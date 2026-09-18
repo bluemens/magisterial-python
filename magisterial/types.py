@@ -262,6 +262,27 @@ class ExportListPage(BaseModel):
     )
 
 
+class FreshnessInfo(BaseModel):
+    """
+    When the source page behind a record was last read. `observed_at` is
+    the last fetch that was ingested; `changed_at` the last time the page's
+    content actually changed; `next_check_at` when the next fetch is due
+    under the seasonal cadence policy (see the Data sources and freshness
+    section). Null when the program has never been read through the target
+    registry.
+    """
+
+    cadence_hours: int | None = Field(
+        None,
+        description="Current refresh interval for this record, in hours.",
+        title="Cadence Hours",
+    )
+    changed_at: AwareDatetime | None = Field(None, title="Changed At")
+    checked_at: AwareDatetime | None = Field(None, title="Checked At")
+    next_check_at: AwareDatetime | None = Field(None, title="Next Check At")
+    observed_at: AwareDatetime | None = Field(None, title="Observed At")
+
+
 class GameFixture(BaseModel):
     """
     One game as listed by GET /v1/games — a side-anchored fixture (home/away,
@@ -351,6 +372,124 @@ class GameSummary(BaseModel):
     id: Any = Field(None, description="Game id as requested.", title="Id")
 
 
+class ManagedAthleteAccessEntry(BaseModel):
+    """
+    One delegated read that returned contact fields.
+    """
+
+    api_key_id: str | None = Field(None, title="Api Key Id")
+    capability: str = Field(..., title="Capability")
+    division: str | None = Field(None, title="Division")
+    grant_id: str = Field(..., title="Grant Id")
+    id: int = Field(..., title="Id")
+    occurred_at: AwareDatetime | None = Field(None, title="Occurred At")
+    player_id: int | None = Field(None, title="Player Id")
+    row_count: int | None = Field(0, title="Row Count")
+    sport_path: str | None = Field(None, title="Sport Path")
+    team_id: int | None = Field(None, title="Team Id")
+
+
+class ManagedAthleteAccessPage(BaseModel):
+    """
+    A page of delegated-access audit events.
+    """
+
+    data: list[ManagedAthleteAccessEntry] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
+    )
+
+
+class ManagedAthleteCreateRequest(BaseModel):
+    """
+    Invite one athlete to authorize your account.
+    """
+
+    email: constr(max_length=255) | None = Field(
+        None,
+        description="Where to send the invitation. Optional: we default to the athlete's on-file contact. A supplied address is accepted only when it matches that contact or the athlete's school .edu domain.",
+        title="Email",
+    )
+    organization_name: constr(max_length=160) | None = Field(
+        None,
+        description="How your platform is named in the invitation email.",
+        title="Organization Name",
+    )
+    player_id: int = Field(
+        ...,
+        description="The athlete's player id (GET /v1/players/search).",
+        title="Player Id",
+    )
+    sport_path: str | None = Field(
+        None,
+        description="The athlete's sport path, e.g. 'womens-soccer'. Speeds up the lookup.",
+        title="Sport Path",
+    )
+
+
+class ManagedAthleteEntry(BaseModel):
+    """
+    One athlete's authorization for your account.
+    """
+
+    athlete_email: str | None = Field(
+        None,
+        description="Masked address the invitation went to.",
+        title="Athlete Email",
+    )
+    athlete_name: str | None = Field(None, title="Athlete Name")
+    consented_at: AwareDatetime | None = Field(None, title="Consented At")
+    created_at: AwareDatetime | None = Field(None, title="Created At")
+    id: str = Field(
+        ...,
+        description="Grant id; use with the other /v1/athletes endpoints.",
+        title="Id",
+    )
+    invite_expires_at: AwareDatetime | None = Field(None, title="Invite Expires At")
+    invited_at: AwareDatetime | None = Field(None, title="Invited At")
+    organization_name: str | None = Field(None, title="Organization Name")
+    person_id: int | None = Field(None, title="Person Id")
+    player_id: int | None = Field(None, title="Player Id")
+    revoked_at: AwareDatetime | None = Field(None, title="Revoked At")
+    revoked_by: str | None = Field(
+        None, description="org | athlete | admin, when revoked.", title="Revoked By"
+    )
+    sport_path: str | None = Field(None, title="Sport Path")
+    status: str = Field(
+        ...,
+        description="invited | active | declined | revoked | expired.",
+        title="Status",
+    )
+
+
+class ManagedAthletePage(BaseModel):
+    """
+    A page of managed athletes.
+    """
+
+    data: list[ManagedAthleteEntry] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
+    )
+
+
+class ManagedAthleteRevokeResponse(BaseModel):
+    id: str = Field(..., title="Id")
+    status: str = Field(..., title="Status")
+
+
 class MovementSubject(BaseModel):
     """
     Display snapshot of the person a movement is about, taken from the
@@ -417,8 +556,8 @@ class PlayerSearchRequest(BaseModel):
     """
     Public body for POST /v1/players/search.
 
-    Scope (`sport`/`gender`/`division`) is required and drives RLS. The
-    remaining fields are a curated, sport-agnostic subset of the internal
+    Scope (`sport`/`gender`/`division`) is required and bounds every result.
+    The remaining fields are a curated, sport-agnostic subset of the app's
     manual-search filters; richer catalog-driven filters come in a later rev.
     """
 
@@ -678,6 +817,9 @@ class RosterPage(BaseModel):
     """
 
     data: list[RosterEntry] = Field(..., title="Data")
+    freshness: FreshnessInfo | None = Field(
+        None, description="When this team's roster page was last read."
+    )
     has_more: bool | None = Field(
         False, description="True when another page is available.", title="Has More"
     )
@@ -692,6 +834,57 @@ class RosterPage(BaseModel):
         description="Season of the returned roster; null when no roster is held.",
         title="Season",
     )
+
+
+class SchoolRef(BaseModel):
+    """
+    The institution behind a team. `ipeds_unitid` is the federal IPEDS
+    UNITID (NCES), the stable external key for joining to your own school
+    records; it is null for schools outside the federal universe (some NAIA,
+    junior-college, Canadian, and independent institutions).
+    """
+
+    athletics_domain: str | None = Field(
+        None,
+        description="The school's official athletics website domain (the source of its program data).",
+        title="Athletics Domain",
+    )
+    city: str | None = Field(None, title="City")
+    control: str | None = Field(
+        None,
+        description="Institutional control, e.g. 'Public' or 'Private nonprofit'.",
+        title="Control",
+    )
+    id: int = Field(
+        ..., description="School id; use with GET /v1/schools/{school_id}.", title="Id"
+    )
+    ipeds_unitid: int | None = Field(
+        None,
+        description="Federal IPEDS UNITID (NCES), when matched.",
+        title="Ipeds Unitid",
+    )
+    name: str | None = Field(None, title="Name")
+    slug: str | None = Field(None, description="Stable school slug.", title="Slug")
+    state: str | None = Field(
+        None, description="Two-letter US state code, when known.", title="State"
+    )
+
+
+class SchoolTeamRef(BaseModel):
+    """
+    One program a school fields, across every sport and division we hold.
+    """
+
+    conference: str | None = Field(None, title="Conference")
+    division: str | None = Field(None, title="Division")
+    id: int = Field(
+        ...,
+        description="Team id; scope-aware detail at GET /v1/teams/{team_id}.",
+        title="Id",
+    )
+    logo_url: str | None = Field(None, title="Logo Url")
+    name: str | None = Field(None, title="Name")
+    sport_path: str | None = Field(None, title="Sport Path")
 
 
 class SportEntry(BaseModel):
@@ -731,6 +924,11 @@ class TeamCoachEntry(BaseModel):
     verified player role permits player-to-coach outreach for the sport.
     """
 
+    bio_text: str | None = Field(
+        None,
+        description="Full biography published on the official coaching profile.",
+        title="Bio Text",
+    )
     bio_url: str | None = Field(
         None, description="Coach bio page on the school site.", title="Bio Url"
     )
@@ -747,6 +945,11 @@ class TeamCoachEntry(BaseModel):
         None,
         description="Cross-school person cluster id, when linked.",
         title="Person Id",
+    )
+    phone: str | None = Field(
+        None,
+        description="Published coach phone; requires the same outreach authority as email.",
+        title="Phone",
     )
     profile_slug: str | None = Field(
         None,
@@ -769,7 +972,15 @@ class TeamCoachesResponse(BaseModel):
     staff list belongs to (the latest one held unless `season` was requested).
     """
 
+    contacts_included: bool | None = Field(
+        False,
+        description="True when contact fields (email, phone) were populated for this request.",
+        title="Contacts Included",
+    )
     data: list[TeamCoachEntry] = Field(..., title="Data")
+    freshness: FreshnessInfo | None = Field(
+        None, description="When this team's staff page was last read."
+    )
     season: str | None = Field(
         None,
         description="Season of the returned staff; null when no staff is held.",
@@ -777,26 +988,15 @@ class TeamCoachesResponse(BaseModel):
     )
 
 
-class TeamDetail(BaseModel):
+class TeamFreshness(BaseModel):
     """
-    A single team plus its per-season document/stat records.
+    Per data kind freshness for one team-program.
     """
 
-    conference: str | None = Field(None, title="Conference")
-    division: str | None = Field(None, title="Division")
-    documents: Any | None = Field(
-        None,
-        description="Per-season team records (schedules, stats documents); shape varies by sport.",
-        title="Documents",
-    )
-    id: int | None = Field(
-        None, description="Team id; use with GET /v1/teams/{team_id}.", title="Id"
-    )
-    logo_url: str | None = Field(None, title="Logo Url")
-    name: str | None = Field(None, title="Name")
-    sport_path: str | None = Field(
-        None, description="Gendered sport key, e.g. 'mens-soccer'.", title="Sport Path"
-    )
+    coaches: FreshnessInfo | None = None
+    roster: FreshnessInfo | None = None
+    schedule: FreshnessInfo | None = None
+    season_stats: FreshnessInfo | None = None
 
 
 class TeamSummary(BaseModel):
@@ -811,6 +1011,10 @@ class TeamSummary(BaseModel):
     )
     logo_url: str | None = Field(None, title="Logo Url")
     name: str | None = Field(None, title="Name")
+    school: SchoolRef | None = Field(
+        None,
+        description="The institution, with its IPEDS UNITID for joining to external records.",
+    )
     sport_path: str | None = Field(
         None, description="Gendered sport key, e.g. 'mens-soccer'.", title="Sport Path"
     )
@@ -818,7 +1022,7 @@ class TeamSummary(BaseModel):
 
 class TransferRecord(BaseModel):
     """
-    One school-change edge for a person (from the RLS-free transfers table).
+    One school-change edge in a person's cross-program career.
     """
 
     first_season_to: str | None = Field(
@@ -864,9 +1068,11 @@ class HTTPValidationError(BaseModel):
 
 class MovementEntry(BaseModel):
     """
-    One published roster/coaching movement event. Only events an editor (or
-    the auto-publish policy) published appear here — a curated feed, not the
-    raw diff stream.
+    One roster/coaching movement event. The default `status=published` feed
+    carries only events an editor (or the auto-publish policy) published; the
+    Enterprise `resolved` and `observed` tiers expose the underlying resolver
+    stream with its raw status, so a platform can act on same-day changes at
+    its own confidence threshold.
     """
 
     division: str | None = Field(None, title="Division")
@@ -876,21 +1082,54 @@ class MovementEntry(BaseModel):
         title="Event Type",
     )
     id: int = Field(..., title="Id")
+    ipeds_unitid: int | None = Field(
+        None,
+        description="Federal IPEDS UNITID of the school, when matched.",
+        title="Ipeds Unitid",
+    )
     kind: str = Field(..., description="'player' or 'coach'.", title="Kind")
-    observed_at: AwareDatetime | None = Field(None, title="Observed At")
+    observed_at: AwareDatetime | None = Field(
+        None,
+        description="When the roster or staff page change was observed by the scraper.",
+        title="Observed At",
+    )
     person_id: int | None = Field(
         None,
         description="Linked person, when the movement was resolved to one.",
         title="Person Id",
     )
-    published_at: AwareDatetime | None = Field(None, title="Published At")
+    published_at: AwareDatetime | None = Field(
+        None,
+        description="When the event entered the curated feed; null until it does.",
+        title="Published At",
+    )
     resolution_kind: str | None = Field(
         None, description="e.g. 'head_coach_change_confirmed'.", title="Resolution Kind"
+    )
+    resolution_status: str | None = Field(
+        None,
+        description="Raw resolver outcome: linked_transfer | linked_move | new_freshman | new_hire | departed_unknown | roster_rollover | reappeared | pending.",
+        title="Resolution Status",
+    )
+    resolved_at: AwareDatetime | None = Field(
+        None,
+        description="When identity resolution finished for this event.",
+        title="Resolved At",
+    )
+    school_id: int | None = Field(
+        None,
+        description="School id; see GET /v1/schools/{school_id}.",
+        title="School Id",
     )
     school_logo_url: str | None = Field(None, title="School Logo Url")
     school_name: str | None = Field(None, title="School Name")
     season: str | None = Field(None, title="Season")
     sport_path: str | None = Field(None, title="Sport Path")
+    status: str | None = Field(
+        None,
+        description="'published' (curated feed), 'resolved' (identity resolution finished, not editorially published), or 'pending' (observed, awaiting resolution).",
+        title="Status",
+    )
     subject: MovementSubject
     team_id: int | None = Field(None, title="Team Id")
     transfer_id: int | None = Field(
@@ -931,6 +1170,85 @@ class PlayerSearchPage(BaseModel):
         description="Opaque cursor for the next page; null when there are no more results.",
         examples=["eyJvZmZzZXQiOiAyNX0="],
         title="Next Cursor",
+    )
+
+
+class SchoolDetail(BaseModel):
+    """
+    A school plus every program it fields.
+    """
+
+    athletics_domain: str | None = Field(
+        None,
+        description="The school's official athletics website domain (the source of its program data).",
+        title="Athletics Domain",
+    )
+    city: str | None = Field(None, title="City")
+    control: str | None = Field(
+        None,
+        description="Institutional control, e.g. 'Public' or 'Private nonprofit'.",
+        title="Control",
+    )
+    id: int = Field(
+        ..., description="School id; use with GET /v1/schools/{school_id}.", title="Id"
+    )
+    ipeds_unitid: int | None = Field(
+        None,
+        description="Federal IPEDS UNITID (NCES), when matched.",
+        title="Ipeds Unitid",
+    )
+    name: str | None = Field(None, title="Name")
+    slug: str | None = Field(None, description="Stable school slug.", title="Slug")
+    state: str | None = Field(
+        None, description="Two-letter US state code, when known.", title="State"
+    )
+    teams: list[SchoolTeamRef] | None = Field(None, title="Teams")
+
+
+class SchoolPage(BaseModel):
+    """
+    A page of schools.
+    """
+
+    data: list[SchoolRef] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
+    )
+
+
+class TeamDetail(BaseModel):
+    """
+    A single team plus its per-season document/stat records.
+    """
+
+    conference: str | None = Field(None, title="Conference")
+    division: str | None = Field(None, title="Division")
+    documents: Any | None = Field(
+        None,
+        description="Per-season team records (schedules, stats documents); shape varies by sport.",
+        title="Documents",
+    )
+    freshness: TeamFreshness | None = Field(
+        None,
+        description="When each kind of source page for this program was last read.",
+    )
+    id: int | None = Field(
+        None, description="Team id; use with GET /v1/teams/{team_id}.", title="Id"
+    )
+    logo_url: str | None = Field(None, title="Logo Url")
+    name: str | None = Field(None, title="Name")
+    school: SchoolRef | None = Field(
+        None,
+        description="The institution, with its IPEDS UNITID for joining to external records.",
+    )
+    sport_path: str | None = Field(
+        None, description="Gendered sport key, e.g. 'mens-soccer'.", title="Sport Path"
     )
 
 

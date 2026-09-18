@@ -41,6 +41,10 @@ player = client.players.get(184223, sport="soccer", division="D3")
 # Live transfer portal (usage-billed; use `since` for incremental polling)
 portal = client.portal.list(sport="basketball", division="D1", status="INC")
 
+# Schools (cross-sport, cross-division institution identity)
+schools = client.schools.list(state="MA")
+school = client.schools.get(schools.data[0].id)
+
 # Natural-language query (usage-billed): submit and wait for the answer
 run = client.query.create_and_poll(
     prompt="Who led the NESCAC in assists this season?",
@@ -91,6 +95,22 @@ Idempotent requests (and `players.search`) are retried automatically on 429s,
 5xx and connection failures — up to `max_retries` (default 2), honoring the
 server's `Retry-After`. Billable creates (`query.create`, `alerts.create`)
 are never retried automatically.
+
+### Managed athletes (Enterprise)
+
+Invite an athlete to authorize your platform, then pass their player id as
+`on_behalf_of` to `teams.coaches` for delegated coach-contact reads:
+
+```python
+grant = client.athletes.create(184223, sport_path="mens-soccer")
+# ... athlete accepts the invitation ...
+staff = client.teams.coaches(
+    1873, sport="soccer", division="D3", on_behalf_of=184223,
+)
+```
+
+`client.athletes.list()`, `.get()`, `.resend_invite()`, `.revoke()`, and
+`.list_access()` manage the grant lifecycle and its audit log.
 
 ## Types
 

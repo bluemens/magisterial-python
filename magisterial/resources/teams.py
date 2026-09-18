@@ -26,10 +26,12 @@ class Teams:
         division: str,
         gender: Optional[str] = None,
         conference: Optional[str] = None,
+        ipeds_unitid: Optional[int] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> SyncPage[TeamSummary]:
-        """Teams in a sport/division scope, alphabetical."""
+        """Teams in a sport/division scope, alphabetical. `ipeds_unitid`
+        filters to the school with that federal IPEDS UNITID."""
 
         def fetch(c: Optional[str]) -> SyncPage[TeamSummary]:
             raw = self._client.request(
@@ -40,6 +42,7 @@ class Teams:
                     "division": division,
                     "gender": gender,
                     "conference": conference,
+                    "ipeds_unitid": ipeds_unitid,
                     "limit": limit,
                     "cursor": c,
                 },
@@ -111,9 +114,15 @@ class Teams:
         division: str,
         gender: Optional[str] = None,
         season: Optional[str] = None,
+        on_behalf_of: Optional[int] = None,
     ) -> TeamCoachesResponse:
         """A team's coaching staff for a season (defaults to the most recent
-        season on record)."""
+        season on record).
+
+        `on_behalf_of` (Enterprise): player id of a managed athlete who has
+        authorized your account. Contact fields are then evaluated against
+        that athlete's verified claim, audited, and billed at the delegated
+        coach-contact rate."""
         return self._client.get_model(
             f"/v1/teams/{team_id}/coaches",
             TeamCoachesResponse,
@@ -121,6 +130,7 @@ class Teams:
             division=division,
             gender=gender,
             season=season,
+            on_behalf_of=on_behalf_of,
         )
 
 
@@ -135,10 +145,12 @@ class AsyncTeams:
         division: str,
         gender: Optional[str] = None,
         conference: Optional[str] = None,
+        ipeds_unitid: Optional[int] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> AsyncPage[TeamSummary]:
-        """Teams in a sport/division scope, alphabetical."""
+        """Teams in a sport/division scope, alphabetical. `ipeds_unitid`
+        filters to the school with that federal IPEDS UNITID."""
 
         async def fetch(c: Optional[str]) -> AsyncPage[TeamSummary]:
             raw = await self._client.request(
@@ -149,6 +161,7 @@ class AsyncTeams:
                     "division": division,
                     "gender": gender,
                     "conference": conference,
+                    "ipeds_unitid": ipeds_unitid,
                     "limit": limit,
                     "cursor": c,
                 },
@@ -220,9 +233,15 @@ class AsyncTeams:
         division: str,
         gender: Optional[str] = None,
         season: Optional[str] = None,
+        on_behalf_of: Optional[int] = None,
     ) -> TeamCoachesResponse:
         """A team's coaching staff for a season (defaults to the most recent
-        season on record)."""
+        season on record).
+
+        `on_behalf_of` (Enterprise): player id of a managed athlete who has
+        authorized your account. Contact fields are then evaluated against
+        that athlete's verified claim, audited, and billed at the delegated
+        coach-contact rate."""
         return await self._client.get_model(
             f"/v1/teams/{team_id}/coaches",
             TeamCoachesResponse,
@@ -230,4 +249,5 @@ class AsyncTeams:
             division=division,
             gender=gender,
             season=season,
+            on_behalf_of=on_behalf_of,
         )

@@ -104,6 +104,7 @@ class Magisterial:
         self._http = http_client or httpx.Client(timeout=timeout)
 
         from .resources.alerts import Alerts
+        from .resources.athletes import Athletes
         from .resources.exports import Exports
         from .resources.games import Games
         from .resources.movements import Movements
@@ -112,11 +113,13 @@ class Magisterial:
         from .resources.portal import Portal
         from .resources.query import Query
         from .resources.reference import Reference
+        from .resources.schools import Schools
         from .resources.teams import Teams
 
         self.reference = Reference(self)
         self.players = Players(self)
         self.teams = Teams(self)
+        self.schools = Schools(self)
         self.persons = Persons(self)
         self.movements = Movements(self)
         self.games = Games(self)
@@ -124,6 +127,7 @@ class Magisterial:
         self.query = Query(self)
         self.alerts = Alerts(self)
         self.exports = Exports(self)
+        self.athletes = Athletes(self)
 
     # -- transport ---------------------------------------------------------
 
@@ -218,6 +222,7 @@ class AsyncMagisterial:
         self._http = http_client or httpx.AsyncClient(timeout=timeout)
 
         from .resources.alerts import AsyncAlerts
+        from .resources.athletes import AsyncAthletes
         from .resources.exports import AsyncExports
         from .resources.games import AsyncGames
         from .resources.movements import AsyncMovements
@@ -226,11 +231,13 @@ class AsyncMagisterial:
         from .resources.portal import AsyncPortal
         from .resources.query import AsyncQuery
         from .resources.reference import AsyncReference
+        from .resources.schools import AsyncSchools
         from .resources.teams import AsyncTeams
 
         self.reference = AsyncReference(self)
         self.players = AsyncPlayers(self)
         self.teams = AsyncTeams(self)
+        self.schools = AsyncSchools(self)
         self.persons = AsyncPersons(self)
         self.movements = AsyncMovements(self)
         self.games = AsyncGames(self)
@@ -238,6 +245,7 @@ class AsyncMagisterial:
         self.query = AsyncQuery(self)
         self.alerts = AsyncAlerts(self)
         self.exports = AsyncExports(self)
+        self.athletes = AsyncAthletes(self)
 
     # -- transport ---------------------------------------------------------
 

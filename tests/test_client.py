@@ -398,6 +398,236 @@ def test_create_and_poll_timeout(monkeypatch):
     assert exc_info.value.run_id == "r1"
 
 
+# -- 0.5.0 endpoints -----------------------------------------------------------
+
+
+def test_teams_list_ipeds_unitid_filter():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["ipeds_unitid"] == "166027"
+        return json_response(
+            200,
+            {
+                "data": [{
+                    "id": 1873, "name": "Amherst", "sport_path": "mens-soccer",
+                    "school": {"id": 42, "name": "Amherst College", "ipeds_unitid": 166027},
+                }],
+                "next_cursor": None,
+                "has_more": False,
+            },
+        )
+
+    client = make_client(handler)
+    page = client.teams.list(sport="soccer", division="D3", ipeds_unitid=166027)
+    assert page.data[0].school.ipeds_unitid == 166027
+
+
+def test_teams_coaches_on_behalf_of():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["on_behalf_of"] == "184223"
+        return json_response(
+            200,
+            {
+                "season": "2025-26",
+                "data": [{"name": "Sam Blake", "role": "Head Coach", "email": "sam@example.edu"}],
+                "contacts_included": True,
+            },
+        )
+
+    client = make_client(handler)
+    staff = client.teams.coaches(
+        1873, sport="soccer", division="D3", on_behalf_of=184223
+    )
+    assert staff.contacts_included is True
+    assert staff.data[0].email == "sam@example.edu"
+
+
+def test_movements_list_status_param():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["status"] == "resolved"
+        return json_response(
+            200,
+            {
+                "data": [{
+                    "id": 60, "kind": "player", "event_type": "player_added",
+                    "sport_path": "mens-soccer", "status": "resolved",
+                    "resolution_status": "linked_transfer",
+                    "subject": {"name": "Alex Kim"},
+                }],
+                "next_cursor": None,
+                "has_more": False,
+            },
+        )
+
+    client = make_client(handler)
+    page = client.movements.list(status="resolved")
+    assert page.data[0].resolution_status == "linked_transfer"
+
+
+def test_schools_list_paginates():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/schools"
+        assert request.url.params["state"] == "MA"
+        return json_response(
+            200,
+            {
+                "data": [{"id": 42, "name": "Amherst College", "ipeds_unitid": 166027, "state": "MA"}],
+                "next_cursor": None,
+                "has_more": False,
+            },
+        )
+
+    client = make_client(handler)
+    page = client.schools.list(state="MA")
+    assert page.data[0].name == "Amherst College"
+    assert page.data[0].ipeds_unitid == 166027
+
+
+def test_schools_get():
+    client = make_client(
+        lambda req: json_response(
+            200,
+            {
+                "id": 42,
+                "name": "Amherst College",
+                "ipeds_unitid": 166027,
+                "teams": [{"id": 1873, "name": "Amherst", "sport_path": "mens-soccer"}],
+            },
+        )
+    )
+    school = client.schools.get(42)
+    assert school.name == "Amherst College"
+    assert school.teams[0].id == 1873
+
+
+def test_athletes_create_not_retried():
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return json_response(
+            429, _error_body("rate_limited", "rate_limit_exceeded", "Slow down.")
+        )
+
+    client = make_client(handler)
+    with pytest.raises(RateLimitError):
+        client.athletes.create(13232, sport_path="mens-soccer")
+    assert calls["n"] == 1  # write: no auto-retry
+
+
+def test_athletes_create_body_and_response():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return json_response(
+            201,
+            {
+                "id": "grant_1",
+                "status": "invited",
+                "player_id": 13232,
+                "sport_path": "mens-soccer",
+                "organization_name": "Northstar Recruiting",
+            },
+        )
+
+    client = make_client(handler)
+    entry = client.athletes.create(
+        13232, sport_path="mens-soccer", organization_name="Northstar Recruiting"
+    )
+    assert seen["body"] == {
+        "player_id": 13232,
+        "sport_path": "mens-soccer",
+        "organization_name": "Northstar Recruiting",
+    }
+    assert entry.id == "grant_1"
+    assert entry.status == "invited"
+
+
+def test_athletes_list_status_filter():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/athletes"
+        assert request.url.params["status"] == "active"
+        return json_response(
+            200,
+            {
+                "data": [{"id": "grant_1", "status": "active", "player_id": 13232}],
+                "next_cursor": None,
+                "has_more": False,
+            },
+        )
+
+    client = make_client(handler)
+    page = client.athletes.list(status="active")
+    assert page.data[0].id == "grant_1"
+
+
+def test_athletes_get():
+    client = make_client(
+        lambda req: json_response(
+            200, {"id": "grant_1", "status": "invited", "player_id": 13232}
+        )
+    )
+    entry = client.athletes.get("grant_1")
+    assert entry.status == "invited"
+
+
+def test_athletes_resend_invite_not_retried():
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return json_response(
+            429, _error_body("rate_limited", "rate_limit_exceeded", "Slow down.")
+        )
+
+    client = make_client(handler)
+    with pytest.raises(RateLimitError):
+        client.athletes.resend_invite("grant_1")
+    assert calls["n"] == 1  # write: no auto-retry
+
+
+def test_athletes_resend_invite():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/v1/athletes/grant_1/resend"
+        return json_response(200, {"id": "grant_1", "status": "invited"})
+
+    client = make_client(handler)
+    entry = client.athletes.resend_invite("grant_1")
+    assert entry.status == "invited"
+
+
+def test_athletes_revoke():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "DELETE"
+        assert request.url.path == "/v1/athletes/grant_1"
+        return json_response(200, {"id": "grant_1", "status": "revoked"})
+
+    client = make_client(handler)
+    result = client.athletes.revoke("grant_1")
+    assert result.status == "revoked"
+
+
+def test_athletes_list_access_paginates():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/athletes/grant_1/access"
+        return json_response(
+            200,
+            {
+                "data": [{
+                    "id": 1, "grant_id": "grant_1", "capability": "outreach.coach.read",
+                    "row_count": 3,
+                }],
+                "next_cursor": None,
+                "has_more": False,
+            },
+        )
+
+    client = make_client(handler)
+    page = client.athletes.list_access("grant_1")
+    assert page.data[0].capability == "outreach.coach.read"
+
+
 # -- async parity ----------------------------------------------------------------
 
 
@@ -446,6 +676,33 @@ async def test_async_team_roster_exposes_season():
     )
     assert page.season == "2026"
     await client.close()
+
+
+@pytest.mark.anyio
+async def test_async_schools_and_athletes():
+    def schools_handler(request: httpx.Request) -> httpx.Response:
+        return json_response(
+            200, {"data": [{"id": 42, "name": "Amherst College"}], "next_cursor": None, "has_more": False}
+        )
+
+    transport = httpx.MockTransport(schools_handler)
+    client = magisterial.AsyncMagisterial(
+        api_key=API_KEY, http_client=httpx.AsyncClient(transport=transport)
+    )
+    page = await client.schools.list()
+    assert page.data[0].name == "Amherst College"
+    await client.close()
+
+    def athletes_handler(request: httpx.Request) -> httpx.Response:
+        return json_response(201, {"id": "grant_1", "status": "invited", "player_id": 13232})
+
+    transport2 = httpx.MockTransport(athletes_handler)
+    client2 = magisterial.AsyncMagisterial(
+        api_key=API_KEY, http_client=httpx.AsyncClient(transport=transport2)
+    )
+    entry = await client2.athletes.create(13232)
+    assert entry.status == "invited"
+    await client2.close()
 
 
 @pytest.fixture
