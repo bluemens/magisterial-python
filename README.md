@@ -30,10 +30,10 @@ client = Magisterial()
 # Search players (auto-pagination follows the cursor for you)
 page = client.players.search(
     sport="soccer", division="D1,NAIA,NJCAA-D1", gender="women",
-    position="Forward", sort_by="goals",
+    position="Forward", sort_by="g",
 )
 for player in page.auto_paging_iter():
-    print(player.name, player.team, player.stats.get("goals"))
+    print(player.name, player.team, player.stats["g"])
 
 # One player's full profile
 player = client.players.get(184223, sport="soccer", division="D3")
@@ -52,6 +52,38 @@ run = client.query.create_and_poll(
 )
 print(run.answer)
 ```
+
+### Stats
+
+A stat has one name everywhere: the field names `client.reference.filter_catalog()`
+lists for a sport (`stats_by_sport`) are what you sort by and what every
+`stats` object holds. Every stat field of the sport is present on every row;
+`None` means the source did not publish it.
+
+```python
+from magisterial.types import SoccerStats
+
+player = page.data[0]
+player.stats["g"], player.stats["sh_pct"], player.stats["yc"]   # plain dict
+SoccerStats.model_validate(player.stats).pk_made                # or typed
+
+detail = client.players.get(player.id, sport="soccer", division="D1", gender="women")
+for season in detail.stats_by_season:        # newest first
+    print(season.season, season.team_id, season.stats["g"])
+print(detail.stats_totals["g"])
+```
+
+There is one stat model per sport: `SoccerStats`, `BasketballStats`,
+`BaseballSoftballStats`, `VolleyballStats`, `FootballStats`, `LacrosseStats`.
+Track and field has no season stats: a search row reports the athlete's best
+mark in `player.track`, and `detail.track_bests` lists the best per event.
+
+A player row carries its profile at the top level (`team_id`, `person_id`,
+`sport`, `gender`, `jersey_number`, `home_state`, `height_inches`, ...).
+Until 2027-01-12 the API also returns the keys it returned before 2026-10-09
+(copies of those fields and the soccer keys `sh%`, `sog%`, `sv%`, `yc-rc`,
+`pg-pa` inside `stats`, and `season_stats` on a player); read the fields
+above instead.
 
 ### Async
 

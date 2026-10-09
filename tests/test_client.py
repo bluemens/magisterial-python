@@ -705,6 +705,68 @@ async def test_async_schools_and_athletes():
     await client2.close()
 
 
+# -- 0.6.0: one stat vocabulary ---------------------------------------------
+
+
+def test_stats_are_a_dict_keyed_by_catalog_names_and_parse_into_the_sport_model():
+    from magisterial.types import SoccerStats
+
+    row = {
+        "id": 184223, "name": "Jordan Rivera", "team_id": 1873, "person_id": 90211,
+        "sport": "soccer", "gender": "men", "home_state": "OR", "season": "2026",
+        # every stat field of the sport, null when unpublished; the keys the
+        # API returned before 2026-10-09 ride along until 2027-01-12
+        "stats": {"gp": 18, "g": 7, "sh_pct": 0.171, "yc": 3, "rc": 0,
+                  "pk_made": 1, "pk_att": 2, "sv": None,
+                  "sh%": 0.171, "yc-rc": "3-0", "team_id": 1873},
+        "team_ranking": None, "track": None,
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert json.loads(request.content)["sort_by"] == "g"
+        return json_response(200, {"data": [row], "next_cursor": None, "has_more": False})
+
+    page = make_client(handler).players.search(sport="soccer", division="D3", sort_by="g")
+    player = page.data[0]
+    assert (player.team_id, player.person_id, player.sport, player.home_state) == (1873, 90211, "soccer", "OR")
+    assert player.stats["g"] == 7 and player.stats["sv"] is None
+    typed = SoccerStats.model_validate(player.stats)
+    assert (typed.g, typed.sh_pct, typed.yc, typed.pk_att) == (7, 0.171, 3, 2)
+
+
+def test_player_detail_lists_seasons_newest_first_with_the_same_stat_object():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return json_response(200, {
+            "id": 184223, "sport": "soccer",
+            "stats_by_season": [
+                {"season": "2026", "team_id": 1873, "stats": {"gp": 18, "g": 7}},
+                {"season": "2025", "team_id": 1873, "stats": {"gp": 16, "g": 3}},
+            ],
+            "stats_totals": {"gp": 34, "g": 10},
+            "track_bests": [],
+        })
+
+    detail = make_client(handler).players.get(184223, sport="soccer", division="D3")
+    assert [s.season for s in detail.stats_by_season] == ["2026", "2025"]
+    assert detail.stats_by_season[0].stats["g"] == 7
+    assert detail.stats_totals["g"] == 10
+
+
+def test_a_validation_error_reads_the_envelope_message():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return json_response(422, {
+            "error": {"type": "invalid_request", "code": "validation_error",
+                      "message": "body.division: Field required",
+                      "fields": [{"field": "body.division", "message": "Field required", "type": "missing"}]},
+            "detail": [{"loc": ["body", "division"], "msg": "Field required", "type": "missing"}],
+        })
+
+    with pytest.raises(magisterial.UnprocessableEntityError) as exc:
+        make_client(handler).players.search(sport="soccer", division="D3")
+    assert exc.value.error_code == "validation_error"
+    assert "body.division" in str(exc.value)
+
+
 @pytest.fixture
 def anyio_backend():
     return "asyncio"

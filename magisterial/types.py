@@ -13,6 +13,9 @@ class AlertCreateRequest(BaseModel):
     Body for POST /v1/alerts (usage-billed per active alert per month).
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     division: str = Field(
         ...,
         description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
@@ -28,7 +31,7 @@ class AlertCreateRequest(BaseModel):
     )
     gender: str | None = Field(
         None,
-        description="'men' or 'women'; ignored for single-gender sports.",
+        description="'men' or 'women'. Defaults to 'men' for a sport with both; ignored for single-gender sports.",
         title="Gender",
     )
     name: constr(min_length=1, max_length=255) = Field(
@@ -137,11 +140,126 @@ class ApiErrorDetail(BaseModel):
 
 class ApiErrorResponse(BaseModel):
     """
-    Envelope returned for every 4xx/5xx from /v1, except 422 request
-    validation errors which use FastAPI's standard `{"detail": [...]}` shape.
+    Envelope returned for every 4xx/5xx from /v1.
     """
 
     error: ApiErrorDetail
+
+
+class ApiValidationErrorResponse(BaseModel):
+    """
+    A request that failed validation (422): the same envelope, with
+    `error.code` 'validation_error' and `error.fields` naming each offending
+    field (`field`, `message`, `type`).
+    """
+
+    detail: list[Any] | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: the validation list as FastAPI words it. Read `error.fields`.",
+        title="Detail",
+    )
+    error: ApiErrorDetail
+
+
+class BaseballSoftballStats(BaseModel):
+    """
+    Season stats for baseball and softball: the stat fields GET /v1/filters/catalog lists for the sport. Every field is present on every row; null means the source did not publish it.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    a_field: int | None = Field(None, description="A (Fielding)", title="A Field")
+    ab: int | None = Field(None, description="AB", title="Ab")
+    ba: float | None = Field(None, description="AVG", title="Ba")
+    baa: float | None = Field(None, description="BAA", title="Baa")
+    bb: int | None = Field(None, description="BB", title="Bb")
+    bb_allowed: int | None = Field(None, description="BB Allowed", title="Bb Allowed")
+    bf: int | None = Field(None, description="Batters Faced", title="Bf")
+    cs: int | None = Field(None, description="CS", title="Cs")
+    cs_field: int | None = Field(None, description="CS (Fielding)", title="Cs Field")
+    doubles: int | None = Field(None, description="2B", title="Doubles")
+    dp: int | None = Field(None, description="DP", title="Dp")
+    e: int | None = Field(None, description="E", title="E")
+    er: int | None = Field(None, description="ER", title="Er")
+    era: float | None = Field(None, description="ERA", title="Era")
+    fpct: float | None = Field(None, description="FLD%", title="Fpct")
+    gp: int | None = Field(None, description="GP", title="Gp")
+    gp_field: int | None = Field(None, description="GP (Fielding)", title="Gp Field")
+    gp_pitch: int | None = Field(None, description="GP (Pitching)", title="Gp Pitch")
+    gs: int | None = Field(None, description="GS", title="Gs")
+    gs_pitch: int | None = Field(None, description="GS (Pitching)", title="Gs Pitch")
+    h: int | None = Field(None, description="H", title="H")
+    h_allowed: int | None = Field(None, description="Hits Allowed", title="H Allowed")
+    hbp: int | None = Field(None, description="HBP", title="Hbp")
+    hr: int | None = Field(None, description="HR", title="Hr")
+    hr_allowed: int | None = Field(None, description="HR Allowed", title="Hr Allowed")
+    ip: float | None = Field(None, description="IP", title="Ip")
+    k_so: int | None = Field(None, description="SO", title="K So")
+    k_so_pitch: int | None = Field(
+        None, description="SO (Pitching)", title="K So Pitch"
+    )
+    l: int | None = Field(None, description="L", title="L")
+    obp: float | None = Field(None, description="OBP", title="Obp")
+    ops: float | None = Field(None, description="OPS", title="Ops")
+    pb: int | None = Field(None, description="PB", title="Pb")
+    po: int | None = Field(None, description="PO", title="Po")
+    r: int | None = Field(None, description="R", title="R")
+    r_allowed: int | None = Field(None, description="Runs Allowed", title="R Allowed")
+    rbi: int | None = Field(None, description="RBI", title="Rbi")
+    sb: int | None = Field(None, description="SB", title="Sb")
+    sba: int | None = Field(None, description="SB Against", title="Sba")
+    sf: int | None = Field(None, description="SF", title="Sf")
+    sh: int | None = Field(None, description="SH", title="Sh")
+    slg: float | None = Field(None, description="SLG", title="Slg")
+    sv: int | None = Field(None, description="SV", title="Sv")
+    tb: int | None = Field(None, description="TB", title="Tb")
+    triples: int | None = Field(None, description="3B", title="Triples")
+    w: int | None = Field(None, description="W", title="W")
+    whip: float | None = Field(None, description="WHIP", title="Whip")
+
+
+class BasketballStats(BaseModel):
+    """
+    Season stats for basketball: the stat fields GET /v1/filters/catalog lists for the sport. Every field is present on every row; null means the source did not publish it.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    ast: int | None = Field(None, description="AST", title="Ast")
+    ast_avg: float | None = Field(None, description="APG", title="Ast Avg")
+    blk: int | None = Field(None, description="BLK", title="Blk")
+    blk_avg: float | None = Field(None, description="BPG", title="Blk Avg")
+    def_reb: int | None = Field(None, description="DREB", title="Def Reb")
+    fg_pct: float | None = Field(None, description="FG%", title="Fg Pct")
+    fga: int | None = Field(None, description="FGA", title="Fga")
+    fgm: int | None = Field(None, description="FGM", title="Fgm")
+    fgm_avg: float | None = Field(None, description="FGM/G", title="Fgm Avg")
+    ft_pct: float | None = Field(None, description="FT%", title="Ft Pct")
+    fta: int | None = Field(None, description="FTA", title="Fta")
+    ftm: int | None = Field(None, description="FTM", title="Ftm")
+    gp: int | None = Field(None, description="GP", title="Gp")
+    gs: int | None = Field(None, description="GS", title="Gs")
+    min_avg: float | None = Field(None, description="MPG", title="Min Avg")
+    min_tot: int | None = Field(None, description="Minutes", title="Min Tot")
+    off_reb: int | None = Field(None, description="OREB", title="Off Reb")
+    pf: int | None = Field(None, description="PF", title="Pf")
+    pts: int | None = Field(None, description="PTS", title="Pts")
+    pts_avg: float | None = Field(None, description="PPG", title="Pts Avg")
+    reb_avg: float | None = Field(None, description="RPG", title="Reb Avg")
+    stl: int | None = Field(None, description="STL", title="Stl")
+    stl_avg: float | None = Field(None, description="SPG", title="Stl Avg")
+    three_pt_a: int | None = Field(None, description="3PA", title="Three Pt A")
+    three_pt_m: int | None = Field(None, description="3PM", title="Three Pt M")
+    three_pt_m_avg: float | None = Field(
+        None, description="3PM/G", title="Three Pt M Avg"
+    )
+    three_pt_pct: float | None = Field(None, description="3P%", title="Three Pt Pct")
+    tot_reb: int | None = Field(None, description="REB", title="Tot Reb")
+    turnovers: int | None = Field(None, description="TO", title="Turnovers")
+    turnovers_avg: float | None = Field(None, description="TO/G", title="Turnovers Avg")
 
 
 class ExportCreateRequest(BaseModel):
@@ -150,9 +268,13 @@ class ExportCreateRequest(BaseModel):
 
     One export = one dataset in one sport/division scope, written as a single
     gzipped flat file. Use the optional filters to keep large datasets under
-    the row cap.
+    the row cap. A field this body does not declare is a 422: a mistyped
+    filter must not become an unfiltered (and billed) export.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     conference: str | None = Field(
         None,
         description="Conference filter (players/teams/coaches).",
@@ -173,7 +295,7 @@ class ExportCreateRequest(BaseModel):
     )
     gender: str | None = Field(
         None,
-        description="'men' or 'women'; ignored for single-gender sports.",
+        description="'men' or 'women'. Defaults to 'men' for a sport with both; ignored for single-gender sports.",
         title="Gender",
     )
     season: str | None = Field(
@@ -260,6 +382,109 @@ class ExportListPage(BaseModel):
         examples=["eyJvZmZzZXQiOiAyNX0="],
         title="Next Cursor",
     )
+
+
+class FootballStats(BaseModel):
+    """
+    Season stats for football: the stat fields GET /v1/filters/catalog lists for the sport. Every field is present on every row; null means the source did not publish it.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    ff: int | None = Field(None, description="Forced Fumbles", title="Ff")
+    fg_att: int | None = Field(None, description="FG Attempts", title="Fg Att")
+    fg_long: int | None = Field(None, description="Longest FG", title="Fg Long")
+    fg_made: int | None = Field(None, description="FG Made", title="Fg Made")
+    fg_pct: float | None = Field(None, description="FG%", title="Fg Pct")
+    fr: int | None = Field(None, description="Fumble Recoveries", title="Fr")
+    fr_td: int | None = Field(None, description="Fumble Return TD", title="Fr Td")
+    fr_yds: int | None = Field(None, description="Fumble Return Yards", title="Fr Yds")
+    fumbles: int | None = Field(None, description="Fumbles", title="Fumbles")
+    fumbles_lost: int | None = Field(
+        None, description="Fumbles Lost", title="Fumbles Lost"
+    )
+    gp: int | None = Field(None, description="GP", title="Gp")
+    gs: int | None = Field(None, description="GS", title="Gs")
+    int_td: int | None = Field(None, description="INT Return TD", title="Int Td")
+    int_yds: int | None = Field(None, description="INT Return Yards", title="Int Yds")
+    interceptions: int | None = Field(
+        None, description="Interceptions", title="Interceptions"
+    )
+    kr: int | None = Field(None, description="Kick Returns", title="Kr")
+    kr_avg: float | None = Field(None, description="KR Average", title="Kr Avg")
+    kr_long: int | None = Field(None, description="Longest KR", title="Kr Long")
+    kr_td: int | None = Field(None, description="KR TD", title="Kr Td")
+    kr_yds: int | None = Field(None, description="KR Yards", title="Kr Yds")
+    pass_att: int | None = Field(None, description="Pass Attempts", title="Pass Att")
+    pass_cmp: int | None = Field(None, description="Completions", title="Pass Cmp")
+    pass_cmp_pct: float | None = Field(
+        None, description="Completion %", title="Pass Cmp Pct"
+    )
+    pass_int: int | None = Field(
+        None, description="Interceptions Thrown", title="Pass Int"
+    )
+    pass_long: int | None = Field(None, description="Longest Pass", title="Pass Long")
+    pass_rating: float | None = Field(
+        None, description="Pass Efficiency", title="Pass Rating"
+    )
+    pass_td: int | None = Field(None, description="Passing TD", title="Pass Td")
+    pass_yds: int | None = Field(None, description="Passing Yards", title="Pass Yds")
+    pass_yds_per_att: float | None = Field(
+        None, description="Yards/Attempt", title="Pass Yds Per Att"
+    )
+    passes_defended: int | None = Field(
+        None, description="Passes Defended", title="Passes Defended"
+    )
+    penalties: int | None = Field(None, description="Penalties", title="Penalties")
+    penalty_yds: int | None = Field(
+        None, description="Penalty Yards", title="Penalty Yds"
+    )
+    pr: int | None = Field(None, description="Punt Returns", title="Pr")
+    pr_avg: float | None = Field(None, description="PR Average", title="Pr Avg")
+    pr_long: int | None = Field(None, description="Longest PR", title="Pr Long")
+    pr_td: int | None = Field(None, description="PR TD", title="Pr Td")
+    pr_yds: int | None = Field(None, description="PR Yards", title="Pr Yds")
+    punt_avg: float | None = Field(None, description="Punt Average", title="Punt Avg")
+    punt_long: int | None = Field(None, description="Longest Punt", title="Punt Long")
+    punt_yds: int | None = Field(None, description="Punt Yards", title="Punt Yds")
+    punts: int | None = Field(None, description="Punts", title="Punts")
+    punts_inside_20: int | None = Field(
+        None, description="Punts Inside 20", title="Punts Inside 20"
+    )
+    qb_hurries: int | None = Field(None, description="QB Hurries", title="Qb Hurries")
+    rec: int | None = Field(None, description="Receptions", title="Rec")
+    rec_long: int | None = Field(
+        None, description="Longest Reception", title="Rec Long"
+    )
+    rec_td: int | None = Field(None, description="Receiving TD", title="Rec Td")
+    rec_yds: int | None = Field(None, description="Receiving Yards", title="Rec Yds")
+    rec_yds_per_rec: float | None = Field(
+        None, description="Yards/Reception", title="Rec Yds Per Rec"
+    )
+    rush_att: int | None = Field(None, description="Rush Attempts", title="Rush Att")
+    rush_long: int | None = Field(None, description="Longest Rush", title="Rush Long")
+    rush_td: int | None = Field(None, description="Rushing TD", title="Rush Td")
+    rush_yds: int | None = Field(None, description="Rushing Yards", title="Rush Yds")
+    rush_yds_per_att: float | None = Field(
+        None, description="Yards/Carry", title="Rush Yds Per Att"
+    )
+    sack_yds: int | None = Field(None, description="Sack Yards", title="Sack Yds")
+    sacks: float | None = Field(None, description="Sacks", title="Sacks")
+    safeties: int | None = Field(None, description="Safeties", title="Safeties")
+    tackles_assist: int | None = Field(
+        None, description="Assisted Tackles", title="Tackles Assist"
+    )
+    tackles_solo: int | None = Field(
+        None, description="Solo Tackles", title="Tackles Solo"
+    )
+    tackles_total: float | None = Field(
+        None, description="Total Tackles", title="Tackles Total"
+    )
+    tfl: float | None = Field(None, description="TFL", title="Tfl")
+    tfl_yds: int | None = Field(None, description="TFL Yards", title="Tfl Yds")
+    xp_att: int | None = Field(None, description="XP Attempts", title="Xp Att")
+    xp_made: int | None = Field(None, description="XP Made", title="Xp Made")
 
 
 class FreshnessInfo(BaseModel):
@@ -372,6 +597,56 @@ class GameSummary(BaseModel):
     id: Any = Field(None, description="Game id as requested.", title="Id")
 
 
+class LacrosseStats(BaseModel):
+    """
+    Season stats for lacrosse: the stat fields GET /v1/filters/catalog lists for the sport. Every field is present on every row; null means the source did not publish it.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    a: int | None = Field(None, description="Assists", title="A")
+    ct: int | None = Field(None, description="Caused Turnovers", title="Ct")
+    dc: int | None = Field(None, description="Draw Controls", title="Dc")
+    fo_pct: float | None = Field(None, description="Faceoff %", title="Fo Pct")
+    fo_taken: int | None = Field(None, description="Faceoffs Taken", title="Fo Taken")
+    fo_won: int | None = Field(None, description="Faceoffs Won", title="Fo Won")
+    fouls: int | None = Field(None, description="Fouls", title="Fouls")
+    fpg: int | None = Field(None, description="Free-Position Goals", title="Fpg")
+    fps: int | None = Field(None, description="Free-Position Shots", title="Fps")
+    g: int | None = Field(None, description="Goals", title="G")
+    g_gp: int | None = Field(None, description="GP (Goalie)", title="G Gp")
+    g_gs: int | None = Field(None, description="GS (Goalie)", title="G Gs")
+    g_seconds: int | None = Field(None, description="Goalie Seconds", title="G Seconds")
+    ga: int | None = Field(None, description="GA", title="Ga")
+    gaa: float | None = Field(None, description="GAA", title="Gaa")
+    gb: int | None = Field(None, description="Ground Balls", title="Gb")
+    gc: int | None = Field(None, description="Green Cards", title="Gc")
+    gp: int | None = Field(None, description="GP", title="Gp")
+    gs: int | None = Field(None, description="GS", title="Gs")
+    gwg: int | None = Field(None, description="Game-Winning Goals", title="Gwg")
+    l: int | None = Field(None, description="L", title="L")
+    man_down_g: int | None = Field(
+        None, description="Man-Down Goals", title="Man Down G"
+    )
+    man_up_g: int | None = Field(None, description="Man-Up Goals", title="Man Up G")
+    pen: int | None = Field(None, description="Penalties", title="Pen")
+    pim_seconds: int | None = Field(
+        None, description="Penalty Seconds", title="Pim Seconds"
+    )
+    pts: int | None = Field(None, description="Points", title="Pts")
+    rc: int | None = Field(None, description="Red Cards", title="Rc")
+    sh: int | None = Field(None, description="Shots", title="Sh")
+    sh_pct: float | None = Field(None, description="Shot %", title="Sh Pct")
+    sog: int | None = Field(None, description="SOG", title="Sog")
+    sog_pct: float | None = Field(None, description="SOG %", title="Sog Pct")
+    sv: int | None = Field(None, description="Saves", title="Sv")
+    sv_pct: float | None = Field(None, description="Save %", title="Sv Pct")
+    turnovers: int | None = Field(None, description="Turnovers", title="Turnovers")
+    w: int | None = Field(None, description="W", title="W")
+    yc: int | None = Field(None, description="Yellow Cards", title="Yc")
+
+
 class ManagedAthleteAccessEntry(BaseModel):
     """
     One delegated read that returned contact fields.
@@ -411,6 +686,9 @@ class ManagedAthleteCreateRequest(BaseModel):
     Invite one athlete to authorize your account.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     email: constr(max_length=255) | None = Field(
         None,
         description="Where to send the invitation. Optional: we default to the athlete's on-file contact. A supplied address is accepted only when it matches that contact or the athlete's school .edu domain.",
@@ -515,41 +793,16 @@ class MovementSubject(BaseModel):
     )
 
 
-class PlayerDetail(BaseModel):
+class NumberRange(BaseModel):
     """
-    A single player's profile with season stats, accolades, and (when the
-    player is linked to a person) their cross-program career.
+    An inclusive range; give either bound or both.
     """
 
-    accolades: Any | None = Field(
-        None, description="Awards and honors, when held.", title="Accolades"
+    model_config = ConfigDict(
+        extra="forbid",
     )
-    career: Any | None = Field(
-        None,
-        description="Cross-program career topology (stints across schools), when linked.",
-        title="Career",
-    )
-    class_year: str | None = Field(None, title="Class Year")
-    conference: str | None = Field(None, title="Conference")
-    division: str | None = Field(None, title="Division")
-    headshot_url: str | None = Field(None, title="Headshot Url")
-    height: str | None = Field(None, title="Height")
-    hometown: str | None = Field(None, title="Hometown")
-    id: int | None = Field(None, title="Id")
-    is_verified: bool | None = Field(None, title="Is Verified")
-    name: str | None = Field(None, title="Name")
-    person_id: Any = Field(
-        None,
-        description="Cross-program person id; use with GET /v1/persons/{person_id}.",
-        title="Person Id",
-    )
-    position: str | None = Field(None, title="Position")
-    season_stats: Any | None = Field(
-        None,
-        description="Per-season stat rows; shape varies by sport.",
-        title="Season Stats",
-    )
-    team: str | None = Field(None, description="Team/school name.", title="Team")
+    max: float | None = Field(None, description="At most this.", title="Max")
+    min: float | None = Field(None, description="At least this.", title="Min")
 
 
 class PlayerSearchRequest(BaseModel):
@@ -557,12 +810,40 @@ class PlayerSearchRequest(BaseModel):
     Public body for POST /v1/players/search.
 
     Scope (`sport`/`gender`/`division`) is required and bounds every result.
-    The remaining fields are a curated, sport-agnostic subset of the app's
-    manual-search filters; richer catalog-driven filters come in a later rev.
+    Everything else is a filter, and every filter is optional. The fields are
+    the ones GET /v1/filters/catalog lists for the sport: bio fields by name,
+    and every season stat through `stats`. A field this endpoint does not
+    know is a 422, never ignored.
     """
 
-    class_year: str | None = Field(None, title="Class Year")
-    conference: str | None = Field(None, title="Conference")
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    bats: str | list[str] | None = Field(
+        None,
+        description="Baseball and softball: 'L', 'R' or 'S'. One value, an array of values, or a comma-separated string (any of).",
+        title="Bats",
+    )
+    class_year: str | list[str] | None = Field(
+        None,
+        description="'Freshman', 'Sophomore', 'Junior' or 'Senior / Graduate'. One value, an array of values, or a comma-separated string (any of).",
+        title="Class Year",
+    )
+    class_year_not: str | list[str] | None = Field(
+        None,
+        description="Exclude these values. Players with no value for the field are left out too.",
+        title="Class Year Not",
+    )
+    conference: str | list[str] | None = Field(
+        None,
+        description="Conference, by full name or abbreviation ('UAA'); GET /v1/conferences lists them. One value, an array of values, or a comma-separated string (any of).",
+        title="Conference",
+    )
+    conference_not: str | list[str] | None = Field(
+        None,
+        description="Exclude these values. Players with no value for the field are left out too.",
+        title="Conference Not",
+    )
     cursor: str | None = Field(
         None,
         description="Opaque pagination cursor from a prior response.",
@@ -575,18 +856,90 @@ class PlayerSearchRequest(BaseModel):
     )
     gender: str | None = Field(
         None,
-        description="'men' or 'women'; ignored for single-gender sports.",
+        description="'men' or 'women'. Defaults to 'men' for a sport with both; ignored for single-gender sports.",
         title="Gender",
     )
-    hometown: str | None = Field(None, title="Hometown")
+    height_inches_max: conint(ge=0) | None = Field(
+        None, description="Height at most this many inches.", title="Height Inches Max"
+    )
+    height_inches_min: conint(ge=0) | None = Field(
+        None, description="Height at least this many inches.", title="Height Inches Min"
+    )
+    high_school: str | list[str] | None = Field(
+        None,
+        description="High school, exact. One value, an array of values, or a comma-separated string (any of).",
+        title="High School",
+    )
+    home_country: str | list[str] | None = Field(
+        None,
+        description="Home country. One value, an array of values, or a comma-separated string (any of).",
+        title="Home Country",
+    )
+    home_country_not: str | list[str] | None = Field(
+        None,
+        description="Exclude these values. Players with no value for the field are left out too.",
+        title="Home Country Not",
+    )
+    home_state: str | list[str] | None = Field(
+        None,
+        description="Home state or province, as a name or a postal code ('Ohio' or 'OH'). One value, an array of values, or a comma-separated string (any of).",
+        title="Home State",
+    )
+    home_state_not: str | list[str] | None = Field(
+        None,
+        description="Exclude these values. Players with no value for the field are left out too.",
+        title="Home State Not",
+    )
+    hometown: str | None = Field(
+        None,
+        description="Home town, e.g. 'Rochester'; matches the spellings rosters use.",
+        title="Hometown",
+    )
+    jersey_number: str | list[str] | None = Field(
+        None,
+        description="Jersey number as published, e.g. '7' or '00'. One value, an array of values, or a comma-separated string (any of).",
+        title="Jersey Number",
+    )
     limit: conint(ge=1, le=100) | None = Field(
         25, description="Page size (max 100).", title="Limit"
     )
-    major: str | None = Field(None, title="Major")
-    position: str | None = Field(None, title="Position")
-    season: str | None = Field(None, title="Season")
+    major: str | list[str] | None = Field(
+        None,
+        description="Academic major: one value is a contains match, an array is exact any-of.",
+        title="Major",
+    )
+    minor: str | list[str] | None = Field(
+        None,
+        description="Academic minor: one value is a contains match, an array is exact any-of.",
+        title="Minor",
+    )
+    name: constr(max_length=120) | None = Field(
+        None,
+        description="Player name search. Every word must appear in the name, in any order, ignoring case, accents and punctuation: 'jack', 'hob', 'Jack Hobday' and 'Hobday, Jack' all find Jack Hobday. A name that matches nobody falls back to close spellings.",
+        title="Name",
+    )
+    player_id: list[int] | None = Field(
+        None, description="Only these player ids.", title="Player Id"
+    )
+    position: str | list[str] | None = Field(
+        None,
+        description="Position, as listed by GET /v1/filters/catalog; matches every spelling rosters use for it. One value, an array of values, or a comma-separated string (any of).",
+        title="Position",
+    )
+    position_not: str | list[str] | None = Field(
+        None,
+        description="Exclude these values. Players with no value for the field are left out too.",
+        title="Position Not",
+    )
+    season: str | list[str] | None = Field(
+        None,
+        description="Season of the stat rows, e.g. '2025'; defaults to the current season. One value, an array of values, or a comma-separated string (any of).",
+        title="Season",
+    )
     sort_by: str | None = Field(
-        None, description="Stat field to sort by.", title="Sort By"
+        None,
+        description="A sortable field from GET /v1/filters/catalog (`sort_fields`): any season stat of the sport, 'height_inches' or 'total_accolades'.",
+        title="Sort By",
     )
     sort_order: str | None = Field(
         "descending", description="'ascending' or 'descending'.", title="Sort Order"
@@ -594,84 +947,77 @@ class PlayerSearchRequest(BaseModel):
     sport: str = Field(
         ..., description="e.g. 'soccer', 'basketball', 'baseball'.", title="Sport"
     )
-    team_name: str | None = Field(None, title="Team Name")
-
-
-class PlayerSeasonsResponse(BaseModel):
-    """
-    Season-history view for one player. All three keys are always present;
-    `track_performances` is populated for track & field athletes only.
-    """
-
-    accolades: Any | None = Field(
-        None, description="Awards and honors, when held.", title="Accolades"
-    )
-    season_stats: Any | None = Field(
+    stats: dict[str, NumberRange] | None = Field(
         None,
-        description="Per-season stat rows; shape varies by sport.",
-        title="Season Stats",
+        description='Season-stat ranges, keyed by the sport\'s stat field from GET /v1/filters/catalog (`stats_by_sport`), e.g. {"g": {"min": 10}, "gaa": {"max": 1.2}}. Bounds are inclusive.',
+        title="Stats",
     )
-    track_performances: Any | None = Field(
+    team_name: str | list[str] | None = Field(
         None,
-        description="Track & field performance list; null for other sports.",
-        title="Track Performances",
+        description="Team (school) name; resolved to the program it names. One value, an array of values, or a comma-separated string (any of).",
+        title="Team Name",
+    )
+    team_name_not: str | list[str] | None = Field(
+        None,
+        description="Exclude these values. Players with no value for the field are left out too.",
+        title="Team Name Not",
+    )
+    throws: str | list[str] | None = Field(
+        None,
+        description="Baseball and softball: 'L' or 'R'. One value, an array of values, or a comma-separated string (any of).",
+        title="Throws",
+    )
+    track_discipline: str | list[str] | None = Field(
+        None,
+        description="Track & field: 'indoor', 'outdoor' or 'xc'. One value, an array of values, or a comma-separated string (any of).",
+        title="Track Discipline",
+    )
+    track_event: str | list[str] | None = Field(
+        None,
+        description="Track & field: event code(s), e.g. '400m' or 'shot_put'. Results rank by best mark in the event.",
+        title="Track Event",
+    )
+    track_marks: dict[str, NumberRange] | None = Field(
+        None,
+        description='Track & field: best-mark ranges per event code, in the event\'s own unit (seconds, meters or points), e.g. {"5000m": {"max": 840}}.',
+        title="Track Marks",
+    )
+    track_season: str | list[str] | None = Field(
+        None,
+        description="Track & field: season label, the academic year's end year ('2027' is 2026-27). One value, an array of values, or a comma-separated string (any of).",
+        title="Track Season",
     )
 
 
-class PlayerSummary(BaseModel):
+class PlayerSeasonStats(BaseModel):
     """
-    A player row as returned by search — identity plus a sport-shaped stat
-    bag. Contact fields (email/phone/social) are intentionally omitted.
+    One season of one player's stats.
     """
 
-    class_year: str | None = Field(
-        None,
-        description="e.g. 'Freshman', 'Sophomore', 'Junior', 'Senior'.",
-        title="Class Year",
-    )
-    conference: str | None = Field(None, title="Conference")
-    division: str | None = Field(
-        None, description="e.g. 'D1', 'D2', 'D3', 'NAIA', 'NJCAA'.", title="Division"
-    )
-    headshot_url: str | None = Field(None, title="Headshot Url")
-    height: str | None = Field(
-        None, description="Formatted height, e.g. '6-2'.", title="Height"
-    )
-    hometown: str | None = Field(None, title="Hometown")
-    id: int | None = Field(
-        None, description="Player id; use with GET /v1/players/{player_id}.", title="Id"
-    )
-    is_verified: bool | None = Field(
-        None,
-        description="True when the athlete has claimed this profile.",
-        title="Is Verified",
-    )
-    name: str | None = Field(None, title="Name")
-    position: str | None = Field(None, title="Position")
     season: str | None = Field(
-        None,
-        description="Season the stat bag belongs to, e.g. '2025-26'.",
-        title="Season",
+        None, description="Season label, e.g. '2026'.", title="Season"
     )
     stats: dict[str, Any] | None = Field(
         None,
-        description="Sport-shaped stat fields; keys vary by sport (see GET /v1/filters/catalog).",
+        description="The season's stats under the field names GET /v1/filters/catalog lists for the sport (`stats_by_sport`), so a stat is filtered, sorted and read under one name. The fields are those of the stat schema for the row's `sport` (SoccerStats, BasketballStats, BaseballSoftballStats, VolleyballStats, FootballStats, LacrosseStats; `x-schema-by-sport` maps them). Every stat field of the sport is present; null means the source did not publish it. Empty for track and field, which reports marks in `track`.",
         title="Stats",
     )
-    team: str | None = Field(None, description="Team/school name.", title="Team")
+    team_id: int | None = Field(
+        None, description="The team the season was played for.", title="Team Id"
+    )
 
 
 class PortalEntry(BaseModel):
     """
     One live transfer-portal entry. `contacts` is present only for callers
     whose key delegates `portal.contact.read` and whose current actor is an
-    active verified coach on a Max account for the requested sport.
+    active verified coach.
     """
 
     conference: str | None = Field(None, title="Conference")
     contacts: dict[str, Any] | None = Field(
         None,
-        description="Protected athlete contact info (email/phone/social); requires portal.contact.read plus current active verified coach and Max sport authority.",
+        description="Protected athlete contact info (email/phone/social); requires portal.contact.read plus a current active verified coach.",
         title="Contacts",
     )
     designated_student_athlete: bool | None = Field(
@@ -683,7 +1029,9 @@ class PortalEntry(BaseModel):
         description="When this entry first appeared in our feed.",
         title="First Seen At",
     )
-    id: str | None = Field(None, title="Id")
+    id: str | None = Field(
+        None, description="Portal entry id (not a player id).", title="Id"
+    )
     initiated_date: str | None = Field(
         None, description="Date the athlete entered the portal.", title="Initiated Date"
     )
@@ -699,6 +1047,16 @@ class PortalEntry(BaseModel):
         title="Last Updated Date",
     )
     name: str | None = Field(None, title="Name")
+    person_id: int | None = Field(
+        None,
+        description="Cross-program person id for the linked player; use with GET /v1/persons/{person_id}. Null when unlinked or not yet clustered.",
+        title="Person Id",
+    )
+    player_id: int | None = Field(
+        None,
+        description="Our player record for this athlete, or null when the entry is not yet linked. Usually their stint at the portal school; for athletes who re-entered before appearing on that roster it is their prior school's record. Use with GET /v1/players/{player_id} in that player's own division.",
+        title="Player Id",
+    )
     sport_path: str | None = Field(None, title="Sport Path")
     status: str | None = Field(
         None, description="NCAA record status, e.g. 'INC' (active).", title="Status"
@@ -707,7 +1065,9 @@ class PortalEntry(BaseModel):
         None, description="Current school (matched name when resolved).", title="Team"
     )
     year: str | None = Field(
-        None, description="Class year code, e.g. 'FR', 'SO', 'JR', 'SR'.", title="Year"
+        None,
+        description="Portal cycle the entry belongs to, e.g. '2025-26'.",
+        title="Year",
     )
 
 
@@ -735,6 +1095,9 @@ class PublicQueryRequest(BaseModel):
     The model is fixed server-side in v1 so billing stays predictable.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     division: str | None = Field(
         "D1",
         description="Comma-separated sport-valid division scope, e.g. 'D1,NAIA,NJCAA-D1'.",
@@ -742,7 +1105,7 @@ class PublicQueryRequest(BaseModel):
     )
     gender: str | None = Field(
         None,
-        description="'men' or 'women'; ignored for single-gender sports.",
+        description="'men' or 'women'. Defaults to 'men' for a sport with both; ignored for single-gender sports.",
         title="Gender",
     )
     prompt: constr(min_length=1, max_length=4000) = Field(
@@ -800,12 +1163,25 @@ class RosterEntry(BaseModel):
 
     class_year: str | None = Field(None, title="Class Year")
     headshot_url: str | None = Field(None, title="Headshot Url")
+    height: str | None = Field(
+        None, description="Formatted height, e.g. '6-2'.", title="Height"
+    )
+    height_inches: int | None = Field(None, title="Height Inches")
+    high_school: str | None = Field(None, title="High School")
+    home_city: str | None = Field(None, title="Home City")
+    home_country: str | None = Field(None, title="Home Country")
+    home_state: str | None = Field(None, title="Home State")
     hometown: str | None = Field(None, title="Hometown")
     id: int | None = Field(
         None, description="Player id; use with GET /v1/players/{player_id}.", title="Id"
     )
     is_verified: bool | None = Field(None, title="Is Verified")
     jersey_number: str | None = Field(None, title="Jersey Number")
+    membership_source: str | None = Field(
+        None,
+        description="How we know this player was on the team that season. 'box_score': the player appears in the team's box scores that season, but no roster page we captured listed them (a season whose page was never captured, or a player later removed from it). Expect the name and the player's stats; position, class year, jersey, height and hometown are usually missing. 'portal_discovery': a transfer-portal entrant we matched to this team's live roster before the roster's own season rows were written. null: recorded before provenance tracking, overwhelmingly from the team's roster page or an association roster feed. Season rosters are a permanent record: players who left mid-season stay listed.",
+        title="Membership Source",
+    )
     name: str | None = Field(None, title="Name")
     person_id: int | None = Field(None, title="Person Id")
     position: str | None = Field(None, title="Position")
@@ -887,6 +1263,43 @@ class SchoolTeamRef(BaseModel):
     sport_path: str | None = Field(None, title="Sport Path")
 
 
+class SoccerStats(BaseModel):
+    """
+    Season stats for soccer: the stat fields GET /v1/filters/catalog lists for the sport. Every field is present on every row; null means the source did not publish it.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    a: int | None = Field(None, description="Assists", title="A")
+    cbo: int | None = Field(None, description="Combined Shutouts", title="Cbo")
+    g: int | None = Field(None, description="Goals", title="G")
+    ga: int | None = Field(None, description="GA", title="Ga")
+    gaa: float | None = Field(None, description="GAA", title="Gaa")
+    gp: int | None = Field(None, description="GP", title="Gp")
+    gs: int | None = Field(None, description="GS", title="Gs")
+    gw: int | None = Field(None, description="Game-Winning Goals", title="Gw")
+    l: int | None = Field(None, description="L", title="L")
+    min: int | None = Field(None, description="Minutes", title="Min")
+    pk_att: int | None = Field(
+        None, description="Penalty Kick Attempts", title="Pk Att"
+    )
+    pk_made: int | None = Field(None, description="Penalty Kicks Made", title="Pk Made")
+    pts: int | None = Field(None, description="Points", title="Pts")
+    rc: int | None = Field(None, description="Red Cards", title="Rc")
+    sf: int | None = Field(None, description="Shots Faced", title="Sf")
+    sh: int | None = Field(None, description="Shots", title="Sh")
+    sh_pct: float | None = Field(None, description="Shot %", title="Sh Pct")
+    sho: int | None = Field(None, description="Shutouts", title="Sho")
+    sog: int | None = Field(None, description="SOG", title="Sog")
+    sog_pct: float | None = Field(None, description="SOG %", title="Sog Pct")
+    sv: int | None = Field(None, description="Saves", title="Sv")
+    sv_pct: float | None = Field(None, description="Save %", title="Sv Pct")
+    t: int | None = Field(None, description="T", title="T")
+    w: int | None = Field(None, description="W", title="W")
+    yc: int | None = Field(None, description="Yellow Cards", title="Yc")
+
+
 class SportEntry(BaseModel):
     """
     A supported sport and the genders it carries.
@@ -953,7 +1366,7 @@ class TeamCoachEntry(BaseModel):
     )
     profile_slug: str | None = Field(
         None,
-        description="Public profile slug on magisterial.ai, when minted.",
+        description="Deprecated, always null, removed in the next SDK release. Public coach profile pages on magisterial.ai were retired.",
         title="Profile Slug",
     )
     role: str | None = Field(
@@ -999,6 +1412,21 @@ class TeamFreshness(BaseModel):
     season_stats: FreshnessInfo | None = None
 
 
+class TeamRanking(BaseModel):
+    """
+    The team's national ranking, when the request filters or sorts by a
+    ranking field. Field names are the filter names.
+    """
+
+    national_rank: int | None = Field(None, title="National Rank")
+    national_rating_value: float | None = Field(None, title="National Rating Value")
+    ranking_is_final: bool | None = Field(None, title="Ranking Is Final")
+    ranking_label: str | None = Field(None, title="Ranking Label")
+    ranking_release_date: str | None = Field(None, title="Ranking Release Date")
+    ranking_season: str | None = Field(None, title="Ranking Season")
+    ranking_system: str | None = Field(None, title="Ranking System")
+
+
 class TeamSummary(BaseModel):
     """
     A team as returned by the teams list.
@@ -1017,6 +1445,84 @@ class TeamSummary(BaseModel):
     )
     sport_path: str | None = Field(
         None, description="Gendered sport key, e.g. 'mens-soccer'.", title="Sport Path"
+    )
+
+
+class TrackBest(BaseModel):
+    """
+    One best mark in one event. Exactly one of `best_mark_seconds`,
+    `best_mark_meters` and `best_points` is set, by the event's measurement:
+    the three names the filter catalog uses for track marks.
+    """
+
+    best_mark_meters: float | None = Field(
+        None,
+        description="Distances and heights: higher is better.",
+        title="Best Mark Meters",
+    )
+    best_mark_seconds: float | None = Field(
+        None, description="Times: lower is better.", title="Best Mark Seconds"
+    )
+    best_points: float | None = Field(
+        None, description="Combined events: higher is better.", title="Best Points"
+    )
+    discipline: str | None = Field(
+        None, description="'indoor', 'outdoor' or 'xc'.", title="Discipline"
+    )
+    event_code: str | None = Field(
+        None, description="Event code, e.g. '400m', 'shot_put'.", title="Event Code"
+    )
+    event_name: str | None = Field(None, title="Event Name")
+    is_top_event: bool | None = Field(
+        None,
+        description="Search rows only. True when the mark is the athlete's strongest event rather than a rank in a searched event.",
+        title="Is Top Event",
+    )
+    measurement_type: str | None = Field(
+        None,
+        description="'time', 'distance', 'height' or 'points'.",
+        title="Measurement Type",
+    )
+    most_recent: str | None = Field(
+        None,
+        description="Player detail only: date of the latest result in the event.",
+        title="Most Recent",
+    )
+    num_performances: int | None = Field(
+        None,
+        description="Player detail only: results behind this best.",
+        title="Num Performances",
+    )
+    rank: int | None = Field(
+        None,
+        description="Search rows ranked by `track_event` only: the athlete's place in that event and discipline.",
+        title="Rank",
+    )
+    season: str | None = Field(
+        None,
+        description="Season of the mark; null for a best across every season held.",
+        title="Season",
+    )
+    window: str | None = Field(
+        None,
+        description="What the best was taken over, e.g. 'Career' or 'Selected seasons'.",
+        title="Window",
+    )
+
+
+class TrackSummary(BaseModel):
+    """
+    A track and field athlete on a search row.
+    """
+
+    best: TrackBest | None = None
+    disciplines: list[str] | None = Field(
+        None, description="Primary first.", title="Disciplines"
+    )
+    primary_discipline: str | None = Field(
+        None,
+        description="Standard discipline group, e.g. 'sprints', 'distance', 'throws'.",
+        title="Primary Discipline",
     )
 
 
@@ -1048,10 +1554,94 @@ class TransferRecord(BaseModel):
     )
 
 
-class ValidationError(BaseModel):
-    loc: list[str | int] = Field(..., title="Location")
-    msg: str = Field(..., title="Message")
-    type: str = Field(..., title="Error Type")
+class VolleyballStats(BaseModel):
+    """
+    Season stats for volleyball: the stat fields GET /v1/filters/catalog lists for the sport. Every field is present on every row; null means the source did not publish it.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    aces_per_set: float | None = Field(
+        None, description="Aces/Set", title="Aces Per Set"
+    )
+    assists: int | None = Field(None, description="Assists", title="Assists")
+    assists_per_set: float | None = Field(
+        None, description="Assists/Set", title="Assists Per Set"
+    )
+    attacks: int | None = Field(None, description="Attack Attempts", title="Attacks")
+    ball_handling_errors: int | None = Field(
+        None, description="Ball-Handling Errors", title="Ball Handling Errors"
+    )
+    block_assists: int | None = Field(
+        None, description="Block Assists", title="Block Assists"
+    )
+    block_errors: int | None = Field(
+        None, description="Block Errors", title="Block Errors"
+    )
+    blocks_per_set: float | None = Field(
+        None, description="Blocks/Set", title="Blocks Per Set"
+    )
+    blocks_solo: int | None = Field(
+        None, description="Solo Blocks", title="Blocks Solo"
+    )
+    digs: int | None = Field(None, description="Digs", title="Digs")
+    digs_per_set: float | None = Field(
+        None, description="Digs/Set", title="Digs Per Set"
+    )
+    double_double_matches_counted: int | None = Field(
+        None,
+        description="Matches Counted for Double-Doubles",
+        title="Double Double Matches Counted",
+    )
+    double_doubles: int | None = Field(
+        None, description="Double-Doubles", title="Double Doubles"
+    )
+    errors: int | None = Field(None, description="Attack Errors", title="Errors")
+    hit_pct: float | None = Field(None, description="Hitting %", title="Hit Pct")
+    kills: int | None = Field(None, description="Kills", title="Kills")
+    kills_per_set: float | None = Field(
+        None, description="Kills/Set", title="Kills Per Set"
+    )
+    matches_played: int | None = Field(
+        None, description="Matches", title="Matches Played"
+    )
+    matches_started: int | None = Field(
+        None, description="Matches Started", title="Matches Started"
+    )
+    points: float | None = Field(None, description="Points", title="Points")
+    points_per_set: float | None = Field(
+        None, description="Points per Set", title="Points Per Set"
+    )
+    reception_attempts: int | None = Field(
+        None, description="Reception Attempts", title="Reception Attempts"
+    )
+    reception_errors: int | None = Field(
+        None, description="Reception Errors", title="Reception Errors"
+    )
+    reception_pct: float | None = Field(
+        None, description="Reception Percentage", title="Reception Pct"
+    )
+    service_aces: int | None = Field(None, description="Aces", title="Service Aces")
+    service_attempts: int | None = Field(
+        None, description="Service Attempts", title="Service Attempts"
+    )
+    service_errors: int | None = Field(
+        None, description="Service Errors", title="Service Errors"
+    )
+    sets_played: int | None = Field(None, description="Sets", title="Sets Played")
+    setting_attempts: int | None = Field(
+        None, description="Setting Attempts", title="Setting Attempts"
+    )
+    setting_errors: int | None = Field(
+        None, description="Setting Errors", title="Setting Errors"
+    )
+    total_blocks: float | None = Field(
+        None, description="Total Blocks", title="Total Blocks"
+    )
+    triple_doubles: int | None = Field(
+        None, description="Triple-Doubles", title="Triple Doubles"
+    )
 
 
 class AlertListResponse(BaseModel):
@@ -1060,10 +1650,6 @@ class AlertListResponse(BaseModel):
     """
 
     data: list[AlertSummary] = Field(..., title="Data")
-
-
-class HTTPValidationError(BaseModel):
-    detail: list[ValidationError] | None = Field(None, title="Detail")
 
 
 class MovementEntry(BaseModel):
@@ -1078,7 +1664,7 @@ class MovementEntry(BaseModel):
     division: str | None = Field(None, title="Division")
     event_type: str = Field(
         ...,
-        description="player_added | player_removed | coach_added | coach_removed | title_changed",
+        description="player_added | player_removed | coach_added | coach_removed | title_changed. The resolved and observed tiers can also carry roster_rollover and attrs_changed.",
         title="Event Type",
     )
     id: int = Field(..., title="Id")
@@ -1108,7 +1694,7 @@ class MovementEntry(BaseModel):
     )
     resolution_status: str | None = Field(
         None,
-        description="Raw resolver outcome: linked_transfer | linked_move | new_freshman | new_hire | departed_unknown | roster_rollover | reappeared | pending.",
+        description="Raw resolver outcome. Players: linked_transfer | new_freshman | graduated | departed_unknown | roster_rollover | reappeared. Coaches: linked_move | new_hire | departed_unknown | title_change_confirmed (a title change checked and found real, e.g. a promotion to head coach). Either kind: pending (observed tier only). Dismissed events are never returned.",
         title="Resolution Status",
     )
     resolved_at: AwareDatetime | None = Field(
@@ -1156,20 +1742,224 @@ class MovementPage(BaseModel):
     )
 
 
-class PlayerSearchPage(BaseModel):
+class PlayerDetail(BaseModel):
     """
-    One page of player search results.
+    A single player's profile with season stats, accolades, and (when the
+    player is linked to a person) their cross-program career.
     """
 
-    data: list[PlayerSummary] = Field(..., title="Data")
-    has_more: bool | None = Field(
-        False, description="True when another page is available.", title="Has More"
+    accolades: Any | None = Field(
+        None, description="Awards and honors, when held.", title="Accolades"
     )
-    next_cursor: str | None = Field(
+    bats: str | None = Field(
+        None, description="Baseball and softball: 'L', 'R' or 'S'.", title="Bats"
+    )
+    career: Any | None = Field(
         None,
-        description="Opaque cursor for the next page; null when there are no more results.",
-        examples=["eyJvZmZzZXQiOiAyNX0="],
-        title="Next Cursor",
+        description="When the player is linked to a person: one entry per school, in order, each with its own `stats_by_season` and `stats_totals`.",
+        title="Career",
+    )
+    class_year: str | None = Field(
+        None,
+        description="e.g. 'Freshman', 'Sophomore', 'Junior', 'Senior'.",
+        title="Class Year",
+    )
+    conference: str | None = Field(None, title="Conference")
+    division: str | None = Field(
+        None, description="e.g. 'D1', 'D2', 'D3', 'NAIA', 'NJCAA-D1'.", title="Division"
+    )
+    gender: str | None = Field(None, description="'men' or 'women'.", title="Gender")
+    headshot_url: str | None = Field(None, title="Headshot Url")
+    height: str | None = Field(
+        None, description="Formatted height, e.g. '6-2'.", title="Height"
+    )
+    height_inches: int | None = Field(None, title="Height Inches")
+    high_school: str | None = Field(None, title="High School")
+    home_city: str | None = Field(None, title="Home City")
+    home_country: str | None = Field(None, title="Home Country")
+    home_state: str | None = Field(None, title="Home State")
+    hometown: str | None = Field(
+        None, description="As published, e.g. 'Portland, OR'.", title="Hometown"
+    )
+    id: int | None = Field(
+        None, description="Player id; use with GET /v1/players/{player_id}.", title="Id"
+    )
+    is_verified: bool | None = Field(
+        None,
+        description="True when the athlete has claimed this profile.",
+        title="Is Verified",
+    )
+    jersey_number: str | None = Field(
+        None, description="As published, e.g. '7' or '00'.", title="Jersey Number"
+    )
+    major: str | None = Field(None, title="Major")
+    minor: str | None = Field(None, title="Minor")
+    name: str | None = Field(None, title="Name")
+    person_id: int | None = Field(
+        None,
+        description="Cross-program person id; use with GET /v1/persons/{person_id}.",
+        title="Person Id",
+    )
+    position: str | None = Field(None, title="Position")
+    season_stats: Any | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: use `stats_by_season`, `stats_totals` and `track_bests`. An object keyed 'season_<year>' (and 'cumulative_null'), each a one-item list holding the season row.",
+        title="Season Stats",
+    )
+    sport: str | None = Field(
+        None,
+        description="Sport, as in the request: 'soccer', 'track-and-field', ...",
+        title="Sport",
+    )
+    sport_path: str | None = Field(
+        None,
+        description="Sport and gender as one key, e.g. 'womens-soccer'; matches teams, games and movements.",
+        title="Sport Path",
+    )
+    stats_by_season: list[PlayerSeasonStats] | None = Field(
+        None,
+        description="One entry per season at this team, newest first.",
+        title="Stats By Season",
+    )
+    stats_totals: dict[str, Any] | None = Field(
+        None,
+        description="Totals across `stats_by_season`: counting stats summed, headline rates recomputed from the totals, the rest null. Same fields as a season's `stats`.",
+        title="Stats Totals",
+    )
+    team: str | None = Field(None, description="Team/school name.", title="Team")
+    team_id: int | None = Field(
+        None, description="Team id; use with GET /v1/teams/{team_id}.", title="Team Id"
+    )
+    team_logo_url: str | None = Field(None, title="Team Logo Url")
+    throws: str | None = Field(
+        None, description="Baseball and softball: 'L' or 'R'.", title="Throws"
+    )
+    track_bests: list[TrackBest] | None = Field(
+        None,
+        description="Track and field: best mark per event and discipline, across every season held and per season.",
+        title="Track Bests",
+    )
+
+
+class PlayerSeasonsResponse(BaseModel):
+    """
+    Season-history view for one player. Every key is always present;
+    `track_bests` and `track_performances` are populated for track & field
+    athletes only.
+    """
+
+    accolades: Any | None = Field(
+        None, description="Awards and honors, when held.", title="Accolades"
+    )
+    season_stats: Any | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: use `stats_by_season`, `stats_totals` and `track_bests`.",
+        title="Season Stats",
+    )
+    stats_by_season: list[PlayerSeasonStats] | None = Field(
+        None,
+        description="One entry per season at this team, newest first.",
+        title="Stats By Season",
+    )
+    stats_totals: dict[str, Any] | None = Field(
+        None,
+        description="Totals across `stats_by_season`; same fields as a season's `stats`.",
+        title="Stats Totals",
+    )
+    track_bests: list[TrackBest] | None = Field(
+        None,
+        description="Track and field: best mark per event and discipline.",
+        title="Track Bests",
+    )
+    track_performances: Any | None = Field(
+        None,
+        description="Track & field performance list; null for other sports.",
+        title="Track Performances",
+    )
+
+
+class PlayerSummary(BaseModel):
+    """
+    A player row as returned by search: the profile plus one season's
+    stats. Contact fields (email/phone/social) are intentionally omitted.
+    """
+
+    bats: str | None = Field(
+        None, description="Baseball and softball: 'L', 'R' or 'S'.", title="Bats"
+    )
+    class_year: str | None = Field(
+        None,
+        description="e.g. 'Freshman', 'Sophomore', 'Junior', 'Senior'.",
+        title="Class Year",
+    )
+    conference: str | None = Field(None, title="Conference")
+    division: str | None = Field(
+        None, description="e.g. 'D1', 'D2', 'D3', 'NAIA', 'NJCAA-D1'.", title="Division"
+    )
+    gender: str | None = Field(None, description="'men' or 'women'.", title="Gender")
+    headshot_url: str | None = Field(None, title="Headshot Url")
+    height: str | None = Field(
+        None, description="Formatted height, e.g. '6-2'.", title="Height"
+    )
+    height_inches: int | None = Field(None, title="Height Inches")
+    high_school: str | None = Field(None, title="High School")
+    home_city: str | None = Field(None, title="Home City")
+    home_country: str | None = Field(None, title="Home Country")
+    home_state: str | None = Field(None, title="Home State")
+    hometown: str | None = Field(
+        None, description="As published, e.g. 'Portland, OR'.", title="Hometown"
+    )
+    id: int | None = Field(
+        None, description="Player id; use with GET /v1/players/{player_id}.", title="Id"
+    )
+    is_verified: bool | None = Field(
+        None,
+        description="True when the athlete has claimed this profile.",
+        title="Is Verified",
+    )
+    jersey_number: str | None = Field(
+        None, description="As published, e.g. '7' or '00'.", title="Jersey Number"
+    )
+    major: str | None = Field(None, title="Major")
+    minor: str | None = Field(None, title="Minor")
+    name: str | None = Field(None, title="Name")
+    person_id: int | None = Field(
+        None,
+        description="Cross-program person id; use with GET /v1/persons/{person_id}.",
+        title="Person Id",
+    )
+    position: str | None = Field(None, title="Position")
+    season: str | None = Field(
+        None, description="Season the stats belong to, e.g. '2026'.", title="Season"
+    )
+    sport: str | None = Field(
+        None,
+        description="Sport, as in the request: 'soccer', 'track-and-field', ...",
+        title="Sport",
+    )
+    sport_path: str | None = Field(
+        None,
+        description="Sport and gender as one key, e.g. 'womens-soccer'; matches teams, games and movements.",
+        title="Sport Path",
+    )
+    stats: dict[str, Any] | None = Field(
+        None,
+        description="The season's stats under the field names GET /v1/filters/catalog lists for the sport (`stats_by_sport`), so a stat is filtered, sorted and read under one name. The fields are those of the stat schema for the row's `sport` (SoccerStats, BasketballStats, BaseballSoftballStats, VolleyballStats, FootballStats, LacrosseStats; `x-schema-by-sport` maps them). Every stat field of the sport is present; null means the source did not publish it. Empty for track and field, which reports marks in `track`. Deprecated, removed on 2027-01-12: until then this object also carries the keys it held before 2026-10-09 (copies of the profile fields above, the soccer spellings 'sh%', 'sog%', 'sv%', 'yc-rc', 'pg-pa', team-ranking keys and track keys). Read the typed fields instead.",
+        title="Stats",
+    )
+    team: str | None = Field(None, description="Team/school name.", title="Team")
+    team_id: int | None = Field(
+        None, description="Team id; use with GET /v1/teams/{team_id}.", title="Team Id"
+    )
+    team_logo_url: str | None = Field(None, title="Team Logo Url")
+    team_ranking: TeamRanking | None = None
+    throws: str | None = Field(
+        None, description="Baseball and softball: 'L' or 'R'.", title="Throws"
+    )
+    track: TrackSummary | None = Field(
+        None, description="Track and field athletes only."
     )
 
 
@@ -1275,3 +2065,20 @@ class TransferListResponse(BaseModel):
     """
 
     data: list[TransferRecord] = Field(..., title="Data")
+
+
+class PlayerSearchPage(BaseModel):
+    """
+    One page of player search results.
+    """
+
+    data: list[PlayerSummary] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
+    )
