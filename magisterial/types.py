@@ -3,9 +3,18 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, conint, constr
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    confloat,
+    conint,
+    constr,
+)
 
 
 class AlertCreateRequest(BaseModel):
@@ -26,7 +35,7 @@ class AlertCreateRequest(BaseModel):
     )
     filters: dict[str, Any] = Field(
         ...,
-        description="Filter DSL; see /v1/filters/catalog and the docs.",
+        description="Conditions, grouped in sections: portal, player and stats, each a list of {field, op, value} objects that must all hold, and any_of, a list of two or more alternative sets of which one must hold. At least one condition beyond the sport and division is required. A key that is not a section, or a section that is not a list of condition objects, is a 400 invalid_filters. GET /v1/filters/catalog lists each section's fields and, as `alert_ops`, the operators each one accepts; a stats condition also names its `sport`.",
         title="Filters",
     )
     gender: str | None = Field(
@@ -381,6 +390,233 @@ class ExportListPage(BaseModel):
         description="Opaque cursor for the next page; null when there are no more results.",
         examples=["eyJvZmZzZXQiOiAyNX0="],
         title="Next Cursor",
+    )
+
+
+class FilterCatalogField(BaseModel):
+    """
+    One field of the filter vocabulary. `field` is the name every /v1
+    endpoint uses for it: in a request and in the rows that come back.
+    """
+
+    alert_ops: list[str] | None = Field(
+        None,
+        description='The `op` values an alert predicate on the field accepts (POST /v1/alerts `filters`: {"<section>": [{"field", "op", "value"}]}); empty when alerts do not take the field.',
+        examples=[["contains", "eq", "in", "neq", "not_in"]],
+        title="Alert Ops",
+    )
+    field: str = Field(
+        ...,
+        description="The field's name on /v1.",
+        examples=["home_state"],
+        title="Field",
+    )
+    label: str = Field(
+        ..., description="Display name.", examples=["Home State"], title="Label"
+    )
+    manual_search_operators: list[str] | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: the operators of the app's own search. Read `search_ops`.",
+        title="Manual Search Operators",
+    )
+    manual_search_supported: bool | None = Field(
+        False,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: whether the app's own search takes the field. Read `search_ops`.",
+        title="Manual Search Supported",
+    )
+    maximum_request_key: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: a parameter name of the Magisterial app's own search, which no /v1 endpoint accepts.",
+        title="Maximum Request Key",
+    )
+    minimum_request_key: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: a parameter name of the Magisterial app's own search, which no /v1 endpoint accepts.",
+        title="Minimum Request Key",
+    )
+    normalize: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: the app's name for how it matches spellings.",
+        title="Normalize",
+    )
+    ops: list[str] | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: every operator of the field's type. Read `search_ops` and `alert_ops`.",
+        title="Ops",
+    )
+    range_request_key: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: a parameter name of the Magisterial app's own search, which no /v1 endpoint accepts.",
+        title="Range Request Key",
+    )
+    request_key: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: a parameter name of the Magisterial app's own search, which no /v1 endpoint accepts.",
+        title="Request Key",
+    )
+    search_ops: list[str] | None = Field(
+        None,
+        description="How POST /v1/players/search can filter on the field; empty when it cannot. 'eq' and 'in': send `<field>` as one value or as an array. 'neq' and 'not_in': `<field>_not`. 'gte' and 'lte': `<field>_min` and `<field>_max`. 'contains': `<field>` as one value is a contains match. 'within_miles': `<field>` as an object with latitude, longitude and miles.",
+        examples=[["eq", "in", "neq", "not_in"]],
+        title="Search Ops",
+    )
+    sortable: bool | None = Field(
+        False,
+        description="Accepted as `sort_by` (see `sort_fields`).",
+        title="Sortable",
+    )
+    type: str = Field(
+        ...,
+        description="'string', 'int', 'float', 'bool', 'datetime' or 'geo'.",
+        examples=["string"],
+        title="Type",
+    )
+    values: list[str] | None = Field(
+        None,
+        description="The canonical values, where the field has a closed set (positions, class years, ...). null: any value.",
+        title="Values",
+    )
+    values_endpoint: bool | None = Field(
+        False,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: whether the app has a typeahead for the field.",
+        title="Values Endpoint",
+    )
+
+
+class FilterCatalogSortFields(BaseModel):
+    """
+    `sort_by` values. Player search sorts by `player[<sport>]`; GET /v1/games by `game`.
+    """
+
+    coach: list[str] = Field(..., title="Coach")
+    game: list[str] = Field(..., title="Game")
+    player: dict[str, list[str]] = Field(
+        ...,
+        description="Per sport: the stat fields plus the sortable profile fields.",
+        title="Player",
+    )
+    team: dict[str, list[str]] = Field(..., description="Per sport.", title="Team")
+
+
+class FilterCatalogStatField(BaseModel):
+    """
+    A season stat: a key of every `stats` object the sport returns.
+    """
+
+    alert_ops: list[str] | None = Field(
+        None,
+        description='The `op` values an alert predicate on the field accepts (POST /v1/alerts `filters`: {"<section>": [{"field", "op", "value"}]}); empty when alerts do not take the field.',
+        examples=[["contains", "eq", "in", "neq", "not_in"]],
+        title="Alert Ops",
+    )
+    field: str = Field(
+        ...,
+        description="The field's name on /v1.",
+        examples=["home_state"],
+        title="Field",
+    )
+    filterable: bool | None = Field(
+        True,
+        description='POST /v1/players/search takes a range on it: `stats: {"<field>": {"min": ..., "max": ...}}`. false: sort only.',
+        title="Filterable",
+    )
+    label: str = Field(
+        ..., description="Display name.", examples=["Home State"], title="Label"
+    )
+    manual_search_operators: list[str] | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: the operators of the app's own search. Read `search_ops`.",
+        title="Manual Search Operators",
+    )
+    manual_search_supported: bool | None = Field(
+        False,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: whether the app's own search takes the field. Read `search_ops`.",
+        title="Manual Search Supported",
+    )
+    maximum_request_key: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: a parameter name of the Magisterial app's own search, which no /v1 endpoint accepts.",
+        title="Maximum Request Key",
+    )
+    minimum_request_key: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: a parameter name of the Magisterial app's own search, which no /v1 endpoint accepts.",
+        title="Minimum Request Key",
+    )
+    normalize: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: the app's name for how it matches spellings.",
+        title="Normalize",
+    )
+    ops: list[str] | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: every operator of the field's type. Read `search_ops` and `alert_ops`.",
+        title="Ops",
+    )
+    range_request_key: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: a parameter name of the Magisterial app's own search, which no /v1 endpoint accepts.",
+        title="Range Request Key",
+    )
+    request_key: str | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: a parameter name of the Magisterial app's own search, which no /v1 endpoint accepts.",
+        title="Request Key",
+    )
+    search_ops: list[str] | None = Field(
+        None,
+        description="How POST /v1/players/search can filter on the field; empty when it cannot. 'eq' and 'in': send `<field>` as one value or as an array. 'neq' and 'not_in': `<field>_not`. 'gte' and 'lte': `<field>_min` and `<field>_max`. 'contains': `<field>` as one value is a contains match. 'within_miles': `<field>` as an object with latitude, longitude and miles.",
+        examples=[["eq", "in", "neq", "not_in"]],
+        title="Search Ops",
+    )
+    sortable: bool | None = Field(
+        False,
+        description="Accepted as `sort_by` (see `sort_fields`).",
+        title="Sortable",
+    )
+    type: str = Field(
+        ...,
+        description="'string', 'int', 'float', 'bool', 'datetime' or 'geo'.",
+        examples=["string"],
+        title="Type",
+    )
+    values: list[str] | None = Field(
+        None,
+        description="The canonical values, where the field has a closed set (positions, class years, ...). null: any value.",
+        title="Values",
+    )
+    values_endpoint: bool | None = Field(
+        False,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: whether the app has a typeahead for the field.",
+        title="Values Endpoint",
+    )
+
+
+class FilterCatalogTrackSeason(BaseModel):
+    label: str = Field(..., examples=["2026-27"], title="Label")
+    value: str = Field(
+        ...,
+        description="Season label, the academic year's end year.",
+        examples=["2027"],
+        title="Value",
     )
 
 
@@ -768,6 +1004,24 @@ class ManagedAthleteRevokeResponse(BaseModel):
     status: str = Field(..., title="Status")
 
 
+class MovementCounterpart(BaseModel):
+    """
+    The other school in a resolved move: where the person came from on an
+    addition, where they went on a removal. Present only when resolution
+    named a different school; never inferred from career history.
+    """
+
+    division: str | None = Field(None, title="Division")
+    school_id: int | None = Field(
+        None,
+        description="School id; see GET /v1/schools/{school_id}.",
+        title="School Id",
+    )
+    school_logo_url: str | None = Field(None, title="School Logo Url")
+    school_name: str | None = Field(None, title="School Name")
+    team_id: int | None = Field(None, title="Team Id")
+
+
 class MovementSubject(BaseModel):
     """
     Display snapshot of the person a movement is about, taken from the
@@ -777,19 +1031,52 @@ class MovementSubject(BaseModel):
     class_year: str | None = Field(
         None, description="Players only.", title="Class Year"
     )
+    first_name: str | None = Field(
+        None,
+        description="Players only, when the roster source published the name in split form.",
+        title="First Name",
+    )
     from_title: str | None = Field(
         None, description="Coaches, title changes only.", title="From Title"
     )
     is_head: bool | None = Field(
         None, description="Coaches only — head-coach role.", title="Is Head"
     )
-    name: str | None = Field(None, title="Name")
+    last_name: str | None = Field(
+        None, description="Players only; null as for `first_name`.", title="Last Name"
+    )
+    name: str | None = Field(
+        None, description="Full name in natural order.", title="Name"
+    )
     position: str | None = Field(None, description="Players only.", title="Position")
     title: str | None = Field(
         None, description="Coaches only — current title.", title="Title"
     )
     to_title: str | None = Field(
         None, description="Coaches, title changes only.", title="To Title"
+    )
+
+
+class NearPoint(BaseModel):
+    """
+    Centre and radius of a hometown search.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    latitude: confloat(ge=-90.0, le=90.0) = Field(
+        ...,
+        description="Latitude of the centre point, in decimal degrees.",
+        title="Latitude",
+    )
+    longitude: confloat(ge=-180.0, le=180.0) = Field(
+        ...,
+        description="Longitude of the centre point, in decimal degrees.",
+        title="Longitude",
+    )
+    miles: confloat(le=3000.0, gt=0.0) = Field(
+        ..., description="Radius in miles (at most 3000).", title="Miles"
     )
 
 
@@ -917,6 +1204,10 @@ class PlayerSearchRequest(BaseModel):
         None,
         description="Player name search. Every word must appear in the name, in any order, ignoring case, accents and punctuation: 'jack', 'hob', 'Jack Hobday' and 'Hobday, Jack' all find Jack Hobday. A name that matches nobody falls back to close spellings.",
         title="Name",
+    )
+    near: NearPoint | None = Field(
+        None,
+        description="Only players whose hometown is within `miles` of this point. A player whose hometown has no coordinates never matches.",
     )
     player_id: list[int] | None = Field(
         None, description="Only these player ids.", title="Player Id"
@@ -1046,7 +1337,9 @@ class PortalEntry(BaseModel):
         description="Date NCAA last updated the record.",
         title="Last Updated Date",
     )
-    name: str | None = Field(None, title="Name")
+    name: str | None = Field(
+        None, description="Full name in natural order.", title="Name"
+    )
     person_id: int | None = Field(
         None,
         description="Cross-program person id for the linked player; use with GET /v1/persons/{person_id}. Null when unlinked or not yet clustered.",
@@ -1162,6 +1455,11 @@ class RosterEntry(BaseModel):
     """
 
     class_year: str | None = Field(None, title="Class Year")
+    first_name: str | None = Field(
+        None,
+        description="Given name, when the roster source published the name in split form; null when it published one undivided name (use `name`).",
+        title="First Name",
+    )
     headshot_url: str | None = Field(None, title="Headshot Url")
     height: str | None = Field(
         None, description="Formatted height, e.g. '6-2'.", title="Height"
@@ -1177,12 +1475,21 @@ class RosterEntry(BaseModel):
     )
     is_verified: bool | None = Field(None, title="Is Verified")
     jersey_number: str | None = Field(None, title="Jersey Number")
+    last_name: str | None = Field(
+        None,
+        description="Family name, including any generational suffix; null as for `first_name`.",
+        title="Last Name",
+    )
     membership_source: str | None = Field(
         None,
         description="How we know this player was on the team that season. 'box_score': the player appears in the team's box scores that season, but no roster page we captured listed them (a season whose page was never captured, or a player later removed from it). Expect the name and the player's stats; position, class year, jersey, height and hometown are usually missing. 'portal_discovery': a transfer-portal entrant we matched to this team's live roster before the roster's own season rows were written. null: recorded before provenance tracking, overwhelmingly from the team's roster page or an association roster feed. Season rosters are a permanent record: players who left mid-season stay listed.",
         title="Membership Source",
     )
-    name: str | None = Field(None, title="Name")
+    name: str | None = Field(
+        None,
+        description="Full name in natural order, e.g. 'Jordan Rivera'.",
+        title="Name",
+    )
     person_id: int | None = Field(None, title="Person Id")
     position: str | None = Field(None, title="Position")
 
@@ -1192,6 +1499,11 @@ class RosterPage(BaseModel):
     One page of roster members from one season.
     """
 
+    coverage: str | None = Field(
+        None,
+        description="Why `data` is populated or empty. 'held': roster members for this season are returned. 'season_not_held': other seasons are held, not the one requested. 'none_listed': the program's source page was read and lists no players. 'not_collected': we have not read a source for this program yet, so an empty list says nothing about the program. 'not_sponsored': the school's athletics site does not list this sport. 'discontinued': the program stopped competing and nothing is held for it.",
+        title="Coverage",
+    )
     data: list[RosterEntry] = Field(..., title="Data")
     freshness: FreshnessInfo | None = Field(
         None, description="When this team's roster page was last read."
@@ -1252,6 +1564,11 @@ class SchoolTeamRef(BaseModel):
     """
 
     conference: str | None = Field(None, title="Conference")
+    discontinued_at: date | None = Field(
+        None,
+        description="Date the program stopped competing; null while active.",
+        title="Discontinued At",
+    )
     division: str | None = Field(None, title="Division")
     id: int = Field(
         ...,
@@ -1261,6 +1578,11 @@ class SchoolTeamRef(BaseModel):
     logo_url: str | None = Field(None, title="Logo Url")
     name: str | None = Field(None, title="Name")
     sport_path: str | None = Field(None, title="Sport Path")
+    status: str | None = Field(
+        None,
+        description="'active', or 'discontinued' when the program stopped competing (the school closed or dropped the sport). A discontinued program keeps its id and its historical rosters, staffs and games.",
+        title="Status",
+    )
 
 
 class SoccerStats(BaseModel):
@@ -1302,9 +1624,18 @@ class SoccerStats(BaseModel):
 
 class SportEntry(BaseModel):
     """
-    A supported sport and the genders it carries.
+    A supported sport, the genders it carries, and the divisions each
+    gender is offered in (the valid values for `division` on scoped endpoints).
     """
 
+    divisions: dict[str, list[str]] | None = Field(
+        None,
+        description="Per gender, the division codes valid for this sport. Football's 'D1' is the combined view of 'D1-FBS' and 'D1-FCS'; request either the combined code or the subdivisions, not both.",
+        examples=[
+            {"men": ["D1", "D2", "D3", "NAIA"], "women": ["D1", "D2", "D3", "NAIA"]}
+        ],
+        title="Divisions",
+    )
     genders: list[str] = Field(..., examples=[["men", "women"]], title="Genders")
     sport: str = Field(..., examples=["soccer"], title="Sport")
 
@@ -1332,9 +1663,9 @@ class StringListResponse(BaseModel):
 
 class TeamCoachEntry(BaseModel):
     """
-    One member of a team's coaching staff for a season. `email` is populated
-    only when the key delegates `outreach.coach.read` and the current actor's
-    verified player role permits player-to-coach outreach for the sport.
+    One member of a team's coaching staff for a season. `email` and `phone`
+    are populated when the response says `contacts_included` (see the Coach
+    contacts section) and the coach has not opted out of contact.
     """
 
     bio_text: str | None = Field(
@@ -1345,9 +1676,14 @@ class TeamCoachEntry(BaseModel):
     bio_url: str | None = Field(
         None, description="Coach bio page on the school site.", title="Bio Url"
     )
+    contact_opt_out: bool | None = Field(
+        None,
+        description="True when this coach asked not to be contacted, so `email` and `phone` are withheld; false otherwise. Null when the response has `contacts_included` false.",
+        title="Contact Opt Out",
+    )
     email: str | None = Field(
         None,
-        description="Coach email; requires exact outreach.coach.read delegation and current verified player-role authority, else null.",
+        description="Published coach email. Null when the response has `contacts_included` false, when the coach opted out of contact, or when none is published.",
         title="Email",
     )
     headshot_url: str | None = Field(None, title="Headshot Url")
@@ -1361,7 +1697,7 @@ class TeamCoachEntry(BaseModel):
     )
     phone: str | None = Field(
         None,
-        description="Published coach phone; requires the same outreach authority as email.",
+        description="Published coach phone; null in the same cases as `email`.",
         title="Phone",
     )
     profile_slug: str | None = Field(
@@ -1389,6 +1725,16 @@ class TeamCoachesResponse(BaseModel):
         False,
         description="True when contact fields (email, phone) were populated for this request.",
         title="Contacts Included",
+    )
+    contacts_unavailable_reason: str | None = Field(
+        None,
+        description="Why contact fields were withheld, when `contacts_included` is false. 'plan_required': the account's plan does not include the coach directory (Developer Pro and up do). 'key_scope_required': the plan includes it but this key lacks the coach.contact.directory_read scope. Null when contacts are included.",
+        title="Contacts Unavailable Reason",
+    )
+    coverage: str | None = Field(
+        None,
+        description="Why `data` is populated or empty. 'held': staff members for this season are returned. 'season_not_held': other seasons are held, not the one requested. 'none_listed': the program's source page was read and lists no staff. 'not_collected': we have not read a source for this program yet, so an empty list says nothing about the program. 'not_sponsored': the school's athletics site does not list this sport. 'discontinued': the program stopped competing and nothing is held for it.",
+        title="Coverage",
     )
     data: list[TeamCoachEntry] = Field(..., title="Data")
     freshness: FreshnessInfo | None = Field(
@@ -1433,6 +1779,11 @@ class TeamSummary(BaseModel):
     """
 
     conference: str | None = Field(None, title="Conference")
+    discontinued_at: date | None = Field(
+        None,
+        description="Date the program stopped competing; null while active.",
+        title="Discontinued At",
+    )
     division: str | None = Field(None, title="Division")
     id: int | None = Field(
         None, description="Team id; use with GET /v1/teams/{team_id}.", title="Id"
@@ -1445,6 +1796,11 @@ class TeamSummary(BaseModel):
     )
     sport_path: str | None = Field(
         None, description="Gendered sport key, e.g. 'mens-soccer'.", title="Sport Path"
+    )
+    status: str | None = Field(
+        None,
+        description="'active', or 'discontinued' when the program stopped competing (the school closed or dropped the sport). A discontinued program keeps its id and its historical rosters, staffs and games.",
+        title="Status",
     )
 
 
@@ -1652,6 +2008,81 @@ class AlertListResponse(BaseModel):
     data: list[AlertSummary] = Field(..., title="Data")
 
 
+class FilterCatalogResponse(BaseModel):
+    """
+    GET /v1/filters/catalog: the names /v1 filters, sorts and reports by.
+    """
+
+    automation_features: list[str] | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: a feature list for the app's own alert builder.",
+        title="Automation Features",
+    )
+    division_multi_select_supported: bool | None = Field(
+        True,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: always true: every `division` parameter takes a comma-separated list.",
+        title="Division Multi Select Supported",
+    )
+    division_scope_encoding: str | None = Field(
+        "comma-separated",
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: always 'comma-separated'.",
+        title="Division Scope Encoding",
+    )
+    divisions: list[str] | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: GET /v1/divisions lists the divisions.",
+        title="Divisions",
+    )
+    divisions_by_sport: dict[str, list[str]] | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: both genders merged. Read `divisions_by_sport_gender`.",
+        title="Divisions By Sport",
+    )
+    divisions_by_sport_gender: dict[str, dict[str, list[str]]] = Field(
+        ...,
+        description="The divisions each gender of a sport is offered in.",
+        title="Divisions By Sport Gender",
+    )
+    ops_by_type: dict[str, list[str]] | None = Field(
+        None,
+        deprecated=True,
+        description="Deprecated, removed on 2027-01-12: every operator per field type. Read each field's `search_ops` and `alert_ops`.",
+        title="Ops By Type",
+    )
+    sections: dict[str, list[FilterCatalogField]] = Field(
+        ...,
+        description="Fields per record type: 'player', 'coach', 'team', 'game', and 'portal' (empty unless the key can read the transfer portal).",
+        title="Sections",
+    )
+    sort_fields: FilterCatalogSortFields
+    sport_genders: dict[str, list[str]] = Field(
+        ..., description="The genders each sport is offered in.", title="Sport Genders"
+    )
+    stats_by_sport: dict[str, list[FilterCatalogStatField]] = Field(
+        ...,
+        description="Per sport, every season-stat field: the keys of `stats` in requests and responses. Track and field is listed as 'track' and holds best-mark fields.",
+        title="Stats By Sport",
+    )
+    track_disciplines: list[str] = Field(
+        ..., description="Values of `track_discipline`.", title="Track Disciplines"
+    )
+    track_event_categories: list[str] = Field(
+        ...,
+        description="Track & field event categories.",
+        title="Track Event Categories",
+    )
+    track_seasons: list[FilterCatalogTrackSeason] = Field(
+        ...,
+        description="Values of `track_season`, newest first.",
+        title="Track Seasons",
+    )
+
+
 class MovementEntry(BaseModel):
     """
     One roster/coaching movement event. The default `status=published` feed
@@ -1661,6 +2092,10 @@ class MovementEntry(BaseModel):
     its own confidence threshold.
     """
 
+    counterpart: MovementCounterpart | None = Field(
+        None,
+        description="The other school in the move: the origin on player_added and coach_added, the destination on player_removed and coach_removed. Null when resolution found none, and always null on title_changed.",
+    )
     division: str | None = Field(None, title="Division")
     event_type: str = Field(
         ...,
@@ -1768,6 +2203,11 @@ class PlayerDetail(BaseModel):
     division: str | None = Field(
         None, description="e.g. 'D1', 'D2', 'D3', 'NAIA', 'NJCAA-D1'.", title="Division"
     )
+    first_name: str | None = Field(
+        None,
+        description="Given name, when the roster source published the name in split form; null when it published one undivided name (use `name`).",
+        title="First Name",
+    )
     gender: str | None = Field(None, description="'men' or 'women'.", title="Gender")
     headshot_url: str | None = Field(None, title="Headshot Url")
     height: str | None = Field(
@@ -1792,9 +2232,18 @@ class PlayerDetail(BaseModel):
     jersey_number: str | None = Field(
         None, description="As published, e.g. '7' or '00'.", title="Jersey Number"
     )
+    last_name: str | None = Field(
+        None,
+        description="Family name, including any generational suffix; null as for `first_name`.",
+        title="Last Name",
+    )
     major: str | None = Field(None, title="Major")
     minor: str | None = Field(None, title="Minor")
-    name: str | None = Field(None, title="Name")
+    name: str | None = Field(
+        None,
+        description="Full name in natural order, e.g. 'Jordan Rivera'.",
+        title="Name",
+    )
     person_id: int | None = Field(
         None,
         description="Cross-program person id; use with GET /v1/persons/{person_id}.",
@@ -1898,6 +2347,11 @@ class PlayerSummary(BaseModel):
     division: str | None = Field(
         None, description="e.g. 'D1', 'D2', 'D3', 'NAIA', 'NJCAA-D1'.", title="Division"
     )
+    first_name: str | None = Field(
+        None,
+        description="Given name, when the roster source published the name in split form; null when it published one undivided name (use `name`).",
+        title="First Name",
+    )
     gender: str | None = Field(None, description="'men' or 'women'.", title="Gender")
     headshot_url: str | None = Field(None, title="Headshot Url")
     height: str | None = Field(
@@ -1922,9 +2376,18 @@ class PlayerSummary(BaseModel):
     jersey_number: str | None = Field(
         None, description="As published, e.g. '7' or '00'.", title="Jersey Number"
     )
+    last_name: str | None = Field(
+        None,
+        description="Family name, including any generational suffix; null as for `first_name`.",
+        title="Last Name",
+    )
     major: str | None = Field(None, title="Major")
     minor: str | None = Field(None, title="Minor")
-    name: str | None = Field(None, title="Name")
+    name: str | None = Field(
+        None,
+        description="Full name in natural order, e.g. 'Jordan Rivera'.",
+        title="Name",
+    )
     person_id: int | None = Field(
         None,
         description="Cross-program person id; use with GET /v1/persons/{person_id}.",
@@ -2018,6 +2481,11 @@ class TeamDetail(BaseModel):
     """
 
     conference: str | None = Field(None, title="Conference")
+    discontinued_at: date | None = Field(
+        None,
+        description="Date the program stopped competing; null while active.",
+        title="Discontinued At",
+    )
     division: str | None = Field(None, title="Division")
     documents: Any | None = Field(
         None,
@@ -2039,6 +2507,11 @@ class TeamDetail(BaseModel):
     )
     sport_path: str | None = Field(
         None, description="Gendered sport key, e.g. 'mens-soccer'.", title="Sport Path"
+    )
+    status: str | None = Field(
+        None,
+        description="'active', or 'discontinued' when the program stopped competing (the school closed or dropped the sport). A discontinued program keeps its id and its historical rosters, staffs and games.",
+        title="Status",
     )
 
 
