@@ -41,9 +41,20 @@ player = client.players.get(184223, sport="soccer", division="D3")
 # Live transfer portal (usage-billed; use `since` for incremental polling)
 portal = client.portal.list(sport="basketball", division="D1", status="INC")
 
-# Schools (cross-sport, cross-division institution identity)
-schools = client.schools.list(state="MA")
+# Schools (cross-sport, cross-division institution identity), each with its
+# College Scorecard profile: admissions, SAT/ACT ranges, enrollment, cost
+schools = client.schools.list(state="MA", admission_rate_max=0.3)
 school = client.schools.get(schools.data[0].id)
+print(school.profile.admission_rate if school.profile else "no federal profile")
+
+# College commitments and their change log (Developer Pro and up)
+commits = client.commitments.list(sport="volleyball", gender="women", grad_year="2027")
+changes = client.commitments.changes(since="2026-11-01T00:00:00Z")
+
+# Portal supply: counts per program and position group, no one named
+# (Developer Ultra and up); keep a copy current with the change log
+supply = client.portal_supply.list(sport="soccer", gender="women", division="D1")
+supply_changes = client.portal_supply.changes(since="2026-11-01T00:00:00Z")
 
 # Natural-language query (usage-billed): submit and wait for the answer
 run = client.query.create_and_poll(
@@ -52,6 +63,19 @@ run = client.query.create_and_poll(
 )
 print(run.answer)
 ```
+
+### Sport-specific events
+
+Golf, swimming & diving and tennis have their own event shapes:
+`client.golf.list_tournaments()` / `.get_tournament()` / `.list_ratings()`,
+`client.swim.list_meets()` / `.get_meet()` / `.list_meet_results()` and
+`client.players.times()`, and `client.tennis.list_matches()` /
+`.list_ita_rankings()`. A team's postseason history and national rankings are
+`client.teams.postseason()` and `client.teams.rankings()`;
+`client.reference.regions()` lists the values `region` filters take, and
+`client.reference.eligibility_rules()` the rules behind every `eligibility`
+reading. `client.movements.changes()` is the movement feed's change log, and
+with a test key `client.sandbox.create_event()` makes a sandbox event happen.
 
 ### Stats
 

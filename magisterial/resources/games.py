@@ -23,6 +23,7 @@ class Games:
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
         status: Optional[str] = None,
+        region: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> SyncPage[GameFixture]:
@@ -43,6 +44,7 @@ class Games:
                     "date_from": date_from,
                     "date_to": date_to,
                     "status": status,
+                    "region": region,
                     "limit": limit,
                     "cursor": c,
                 },
@@ -85,6 +87,7 @@ class AsyncGames:
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
         status: Optional[str] = None,
+        region: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> AsyncPage[GameFixture]:
@@ -105,6 +108,7 @@ class AsyncGames:
                     "date_from": date_from,
                     "date_to": date_to,
                     "status": status,
+                    "region": region,
                     "limit": limit,
                     "cursor": c,
                 },

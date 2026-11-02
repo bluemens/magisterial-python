@@ -10,6 +10,8 @@ from ..types import (
     PlayerSearchPage,
     PlayerSeasonsResponse,
     PlayerSummary,
+    SwimTime,
+    SwimTimesPage,
 )
 
 
@@ -129,6 +131,45 @@ class Players:
         )
 
 
+    def times(
+        self,
+        player_id: int,
+        *,
+        sport: str,
+        division: str,
+        gender: Optional[str] = None,
+        event: Optional[str] = None,
+        course: Optional[str] = None,
+        season: Optional[str] = None,
+        best_only: Optional[bool] = None,
+        limit: Optional[int] = None,
+        cursor: Optional[str] = None,
+    ) -> SyncPage[SwimTime]:
+        """A swimmer's or diver's legal swims and dives, newest first, with meet,
+        event, round, place, time or points, and splits."""
+
+        def fetch(c: Optional[str]) -> SyncPage[SwimTime]:
+            raw = self._client.request(
+                "GET",
+                f"/v1/players/{player_id}/times",
+                params={
+                    "sport": sport,
+                    "division": division,
+                    "gender": gender,
+                    "event": event,
+                    "course": course,
+                    "season": season,
+                    "best_only": best_only,
+                    "limit": limit,
+                    "cursor": c,
+                },
+            )
+            parsed = SwimTimesPage.model_validate(raw)
+            return SyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch)
+
+        return fetch(cursor)
+
+
 class AsyncPlayers:
     def __init__(self, client) -> None:
         self._client = client
@@ -206,3 +247,41 @@ class AsyncPlayers:
             division=division,
             gender=gender,
         )
+
+    async def times(
+        self,
+        player_id: int,
+        *,
+        sport: str,
+        division: str,
+        gender: Optional[str] = None,
+        event: Optional[str] = None,
+        course: Optional[str] = None,
+        season: Optional[str] = None,
+        best_only: Optional[bool] = None,
+        limit: Optional[int] = None,
+        cursor: Optional[str] = None,
+    ) -> AsyncPage[SwimTime]:
+        """A swimmer's or diver's legal swims and dives, newest first, with meet,
+        event, round, place, time or points, and splits."""
+
+        async def fetch(c: Optional[str]) -> AsyncPage[SwimTime]:
+            raw = await self._client.request(
+                "GET",
+                f"/v1/players/{player_id}/times",
+                params={
+                    "sport": sport,
+                    "division": division,
+                    "gender": gender,
+                    "event": event,
+                    "course": course,
+                    "season": season,
+                    "best_only": best_only,
+                    "limit": limit,
+                    "cursor": c,
+                },
+            )
+            parsed = SwimTimesPage.model_validate(raw)
+            return AsyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch)
+
+        return await fetch(cursor)

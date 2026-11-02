@@ -11,6 +11,8 @@ from ..types import (
     TeamCoachesResponse,
     TeamDetail,
     TeamPage,
+    TeamPostseasonResponse,
+    TeamRankingsResponse,
     TeamSummary,
 )
 
@@ -27,6 +29,10 @@ class Teams:
         gender: Optional[str] = None,
         conference: Optional[str] = None,
         ipeds_unitid: Optional[int] = None,
+        region: Optional[str] = None,
+        region_not: Optional[str] = None,
+        roster_changed_since: Optional[str] = None,
+        coaches_changed_since: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> SyncPage[TeamSummary]:
@@ -43,6 +49,10 @@ class Teams:
                     "gender": gender,
                     "conference": conference,
                     "ipeds_unitid": ipeds_unitid,
+                    "region": region,
+                    "region_not": region_not,
+                    "roster_changed_since": roster_changed_since,
+                    "coaches_changed_since": coaches_changed_since,
                     "limit": limit,
                     "cursor": c,
                 },
@@ -77,6 +87,11 @@ class Teams:
         division: str,
         gender: Optional[str] = None,
         season: Optional[str] = None,
+        class_level: Optional[str] = None,
+        class_level_not: Optional[str] = None,
+        class_redshirt: Optional[bool] = None,
+        seasons_remaining_min: Optional[int] = None,
+        eligibility_confidence: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> SyncPage[RosterEntry]:
@@ -91,6 +106,11 @@ class Teams:
                     "division": division,
                     "gender": gender,
                     "season": season,
+                    "class_level": class_level,
+                    "class_level_not": class_level_not,
+                    "class_redshirt": class_redshirt,
+                    "seasons_remaining_min": seasons_remaining_min,
+                    "eligibility_confidence": eligibility_confidence,
                     "limit": limit,
                     "cursor": c,
                 },
@@ -134,6 +154,51 @@ class Teams:
         )
 
 
+    def postseason(
+        self,
+        team_id: int,
+        *,
+        sport: str,
+        division: Optional[str] = None,
+        gender: Optional[str] = None,
+        season: Optional[str] = None,
+        kind: Optional[str] = None,
+    ) -> TeamPostseasonResponse:
+        """What a team won and how far it went, season by season: national
+        tournaments, bowl games, and conference titles."""
+        return self._client.get_model(
+            f"/v1/teams/{team_id}/postseason",
+            TeamPostseasonResponse,
+            sport=sport,
+            division=division,
+            gender=gender,
+            season=season,
+            kind=kind,
+        )
+
+    def rankings(
+        self,
+        team_id: int,
+        *,
+        sport: str,
+        division: Optional[str] = None,
+        gender: Optional[str] = None,
+        season: Optional[str] = None,
+        ranking_system: Optional[str] = None,
+    ) -> TeamRankingsResponse:
+        """Where a team stands, or finished, in each national ranking, season by
+        season (RPI, NET, NPI, coaches polls, ITA, Clippd, USCHO)."""
+        return self._client.get_model(
+            f"/v1/teams/{team_id}/rankings",
+            TeamRankingsResponse,
+            sport=sport,
+            division=division,
+            gender=gender,
+            season=season,
+            ranking_system=ranking_system,
+        )
+
+
 class AsyncTeams:
     def __init__(self, client) -> None:
         self._client = client
@@ -146,6 +211,10 @@ class AsyncTeams:
         gender: Optional[str] = None,
         conference: Optional[str] = None,
         ipeds_unitid: Optional[int] = None,
+        region: Optional[str] = None,
+        region_not: Optional[str] = None,
+        roster_changed_since: Optional[str] = None,
+        coaches_changed_since: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> AsyncPage[TeamSummary]:
@@ -162,6 +231,10 @@ class AsyncTeams:
                     "gender": gender,
                     "conference": conference,
                     "ipeds_unitid": ipeds_unitid,
+                    "region": region,
+                    "region_not": region_not,
+                    "roster_changed_since": roster_changed_since,
+                    "coaches_changed_since": coaches_changed_since,
                     "limit": limit,
                     "cursor": c,
                 },
@@ -196,6 +269,11 @@ class AsyncTeams:
         division: str,
         gender: Optional[str] = None,
         season: Optional[str] = None,
+        class_level: Optional[str] = None,
+        class_level_not: Optional[str] = None,
+        class_redshirt: Optional[bool] = None,
+        seasons_remaining_min: Optional[int] = None,
+        eligibility_confidence: Optional[str] = None,
         limit: Optional[int] = None,
         cursor: Optional[str] = None,
     ) -> AsyncPage[RosterEntry]:
@@ -210,6 +288,11 @@ class AsyncTeams:
                     "division": division,
                     "gender": gender,
                     "season": season,
+                    "class_level": class_level,
+                    "class_level_not": class_level_not,
+                    "class_redshirt": class_redshirt,
+                    "seasons_remaining_min": seasons_remaining_min,
+                    "eligibility_confidence": eligibility_confidence,
                     "limit": limit,
                     "cursor": c,
                 },
@@ -250,4 +333,48 @@ class AsyncTeams:
             gender=gender,
             season=season,
             on_behalf_of=on_behalf_of,
+        )
+
+    async def postseason(
+        self,
+        team_id: int,
+        *,
+        sport: str,
+        division: Optional[str] = None,
+        gender: Optional[str] = None,
+        season: Optional[str] = None,
+        kind: Optional[str] = None,
+    ) -> TeamPostseasonResponse:
+        """What a team won and how far it went, season by season: national
+        tournaments, bowl games, and conference titles."""
+        return await self._client.get_model(
+            f"/v1/teams/{team_id}/postseason",
+            TeamPostseasonResponse,
+            sport=sport,
+            division=division,
+            gender=gender,
+            season=season,
+            kind=kind,
+        )
+
+    async def rankings(
+        self,
+        team_id: int,
+        *,
+        sport: str,
+        division: Optional[str] = None,
+        gender: Optional[str] = None,
+        season: Optional[str] = None,
+        ranking_system: Optional[str] = None,
+    ) -> TeamRankingsResponse:
+        """Where a team stands, or finished, in each national ranking, season by
+        season (RPI, NET, NPI, coaches polls, ITA, Clippd, USCHO)."""
+        return await self._client.get_model(
+            f"/v1/teams/{team_id}/rankings",
+            TeamRankingsResponse,
+            sport=sport,
+            division=division,
+            gender=gender,
+            season=season,
+            ranking_system=ranking_system,
         )

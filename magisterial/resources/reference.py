@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from ..types import SportListResponse, StringListResponse
+from ..types import (
+    EligibilityRulesResponse,
+    SportListResponse,
+    StringListResponse,
+)
 
 
 class Reference:
@@ -43,6 +47,29 @@ class Reference:
         )
 
 
+    def regions(
+        self,
+        *,
+        sport: str,
+        division: str,
+        gender: Optional[str] = None,
+    ) -> StringListResponse:
+        """Regions teams in a sport/division scope are in (e.g. 'NJCAA Region IV'):
+        valid values for the `region` filters."""
+        return self._client.get_model(
+            "/v1/regions",
+            StringListResponse,
+            sport=sport,
+            division=division,
+            gender=gender,
+        )
+
+    def eligibility_rules(self) -> EligibilityRulesResponse:
+        """The rules every `eligibility` reading is made under, per governing body,
+        with the source each was read from and the `rules_version`."""
+        return self._client.get_model("/v1/eligibility/rules", EligibilityRulesResponse)
+
+
 class AsyncReference:
     def __init__(self, client) -> None:
         self._client = client
@@ -77,3 +104,25 @@ class AsyncReference:
         return await self._client.request(
             "GET", "/v1/filters/catalog", params={"sport": sport}
         )
+
+    async def regions(
+        self,
+        *,
+        sport: str,
+        division: str,
+        gender: Optional[str] = None,
+    ) -> StringListResponse:
+        """Regions teams in a sport/division scope are in (e.g. 'NJCAA Region IV'):
+        valid values for the `region` filters."""
+        return await self._client.get_model(
+            "/v1/regions",
+            StringListResponse,
+            sport=sport,
+            division=division,
+            gender=gender,
+        )
+
+    async def eligibility_rules(self) -> EligibilityRulesResponse:
+        """The rules every `eligibility` reading is made under, per governing body,
+        with the source each was read from and the `rules_version`."""
+        return await self._client.get_model("/v1/eligibility/rules", EligibilityRulesResponse)

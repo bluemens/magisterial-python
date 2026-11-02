@@ -105,16 +105,22 @@ class Magisterial:
 
         from .resources.alerts import Alerts
         from .resources.athletes import Athletes
+        from .resources.commitments import Commitments
         from .resources.exports import Exports
         from .resources.games import Games
+        from .resources.golf import Golf
         from .resources.movements import Movements
         from .resources.persons import Persons
         from .resources.players import Players
         from .resources.portal import Portal
+        from .resources.portal_supply import PortalSupply
         from .resources.query import Query
         from .resources.reference import Reference
+        from .resources.sandbox import Sandbox
         from .resources.schools import Schools
+        from .resources.swim import Swim
         from .resources.teams import Teams
+        from .resources.tennis import Tennis
 
         self.reference = Reference(self)
         self.players = Players(self)
@@ -124,10 +130,16 @@ class Magisterial:
         self.movements = Movements(self)
         self.games = Games(self)
         self.portal = Portal(self)
+        self.portal_supply = PortalSupply(self)
         self.query = Query(self)
         self.alerts = Alerts(self)
         self.exports = Exports(self)
         self.athletes = Athletes(self)
+        self.commitments = Commitments(self)
+        self.golf = Golf(self)
+        self.swim = Swim(self)
+        self.tennis = Tennis(self)
+        self.sandbox = Sandbox(self)
 
     # -- transport ---------------------------------------------------------
 
@@ -223,16 +235,22 @@ class AsyncMagisterial:
 
         from .resources.alerts import AsyncAlerts
         from .resources.athletes import AsyncAthletes
+        from .resources.commitments import AsyncCommitments
         from .resources.exports import AsyncExports
         from .resources.games import AsyncGames
+        from .resources.golf import AsyncGolf
         from .resources.movements import AsyncMovements
         from .resources.persons import AsyncPersons
         from .resources.players import AsyncPlayers
         from .resources.portal import AsyncPortal
+        from .resources.portal_supply import AsyncPortalSupply
         from .resources.query import AsyncQuery
         from .resources.reference import AsyncReference
+        from .resources.sandbox import AsyncSandbox
         from .resources.schools import AsyncSchools
+        from .resources.swim import AsyncSwim
         from .resources.teams import AsyncTeams
+        from .resources.tennis import AsyncTennis
 
         self.reference = AsyncReference(self)
         self.players = AsyncPlayers(self)
@@ -242,10 +260,16 @@ class AsyncMagisterial:
         self.movements = AsyncMovements(self)
         self.games = AsyncGames(self)
         self.portal = AsyncPortal(self)
+        self.portal_supply = AsyncPortalSupply(self)
         self.query = AsyncQuery(self)
         self.alerts = AsyncAlerts(self)
         self.exports = AsyncExports(self)
         self.athletes = AsyncAthletes(self)
+        self.commitments = AsyncCommitments(self)
+        self.golf = AsyncGolf(self)
+        self.swim = AsyncSwim(self)
+        self.tennis = AsyncTennis(self)
+        self.sandbox = AsyncSandbox(self)
 
     # -- transport ---------------------------------------------------------
 
