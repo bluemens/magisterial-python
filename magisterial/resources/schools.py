@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from .._pagination import AsyncPage, SyncPage
-from ..types import SchoolDetail, SchoolPage, SchoolSummary
+from ..types import SchoolDetail, SchoolPage, SchoolSummary, SchoolDiscoveryResponse
 
 
 class Schools:
@@ -58,6 +58,26 @@ class Schools:
             return SyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch)
 
         return fetch(cursor)
+
+    def resolve(
+        self, *, kind: Literal["college", "high_school"] = "college",
+        query: Optional[str] = None, school_id: Optional[int] = None,
+        ipeds_unitid: Optional[int] = None, high_school_id: Optional[int] = None,
+        nces_id: Optional[str] = None, sport: Optional[str] = None,
+        gender: Optional[str] = None, division: Optional[str] = None,
+        city: Optional[str] = None, state: Optional[str] = None, country: Optional[str] = None,
+    ) -> SchoolDiscoveryResponse:
+        """Discover identities, choose candidates from context, then retain IDs.
+
+        College names/aliases identify automatically; partial/typo candidates
+        include location and programs. High schools use their own IDs/NCES.
+        """
+        body = {k: v for k, v in dict(kind=kind, query=query, school_id=school_id,
+            ipeds_unitid=ipeds_unitid, high_school_id=high_school_id, nces_id=nces_id,
+            sport=sport, gender=gender, division=division, city=city, state=state,
+            country=country).items() if v is not None}
+        raw = self._client.request("POST", "/v1/schools/resolve", json=body, retryable=True)
+        return SchoolDiscoveryResponse.model_validate(raw)
 
     def get(self, school_id: int) -> SchoolDetail:
         """One institution, its College Scorecard `profile`, and every program
@@ -117,6 +137,26 @@ class AsyncSchools:
             return AsyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch)
 
         return await fetch(cursor)
+
+    async def resolve(
+        self, *, kind: Literal["college", "high_school"] = "college",
+        query: Optional[str] = None, school_id: Optional[int] = None,
+        ipeds_unitid: Optional[int] = None, high_school_id: Optional[int] = None,
+        nces_id: Optional[str] = None, sport: Optional[str] = None,
+        gender: Optional[str] = None, division: Optional[str] = None,
+        city: Optional[str] = None, state: Optional[str] = None, country: Optional[str] = None,
+    ) -> SchoolDiscoveryResponse:
+        """Discover identities, choose candidates from context, then retain IDs.
+
+        College names/aliases identify automatically; partial/typo candidates
+        include location and programs. High schools use their own IDs/NCES.
+        """
+        body = {k: v for k, v in dict(kind=kind, query=query, school_id=school_id,
+            ipeds_unitid=ipeds_unitid, high_school_id=high_school_id, nces_id=nces_id,
+            sport=sport, gender=gender, division=division, city=city, state=state,
+            country=country).items() if v is not None}
+        raw = await self._client.request("POST", "/v1/schools/resolve", json=body, retryable=True)
+        return SchoolDiscoveryResponse.model_validate(raw)
 
     async def get(self, school_id: int) -> SchoolDetail:
         """One institution, its College Scorecard `profile`, and every program

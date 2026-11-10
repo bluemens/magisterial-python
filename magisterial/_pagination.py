@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from typing import (
+    TYPE_CHECKING,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -14,6 +15,9 @@ from typing import (
     Optional,
     TypeVar,
 )
+
+if TYPE_CHECKING:
+    from .types import SchoolDiscoveryResponse
 
 T = TypeVar("T")
 
@@ -30,11 +34,13 @@ class SyncPage(Generic[T]):
         fetch_next: Callable[[str], "SyncPage[T]"],
         *,
         season: Optional[str] = None,
+        school_resolutions: Optional[List[SchoolDiscoveryResponse]] = None,
     ) -> None:
         self.data = data
         self.next_cursor = next_cursor
         self.has_more = has_more
         self.season = season
+        self.school_resolutions = school_resolutions or []
         self._fetch_next = fetch_next
 
     def __iter__(self) -> Iterator[T]:
@@ -71,11 +77,13 @@ class AsyncPage(Generic[T]):
         fetch_next: Callable[[str], Awaitable["AsyncPage[T]"]],
         *,
         season: Optional[str] = None,
+        school_resolutions: Optional[List[SchoolDiscoveryResponse]] = None,
     ) -> None:
         self.data = data
         self.next_cursor = next_cursor
         self.has_more = has_more
         self.season = season
+        self.school_resolutions = school_resolutions or []
         self._fetch_next = fetch_next
 
     def __iter__(self) -> Iterator[T]:
