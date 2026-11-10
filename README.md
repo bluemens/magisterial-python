@@ -168,6 +168,22 @@ staff = client.teams.coaches(
 `client.athletes.list()`, `.get()`, `.resend_invite()`, `.revoke()`, and
 `.list_access()` manage the grant lifecycle and its audit log.
 
+## School discovery
+
+```python
+scope = dict(sport="soccer", gender="women", division="D2")
+found = client.schools.resolve(query="Lock Haven University", **scope)
+if found.selected and found.selected.in_scope_team_ids:
+    players = client.players.search(team_id=found.selected.in_scope_team_ids, **scope)
+else:
+    print(found.candidates)
+```
+
+Use candidate location and program details to choose an identity. For secondary
+schools, use `kind="high_school"` and an optional state or city, then pass the
+returned `high_school_id` or NCES ID to player search. Name-based player and team
+searches return evidence on `page.school_resolutions`.
+
 ## Types
 
 All request/response models live in `magisterial.types` and are generated from
