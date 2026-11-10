@@ -28,6 +28,11 @@ class Teams:
         division: str,
         gender: Optional[str] = None,
         conference: Optional[str] = None,
+        school: Optional[str] = None,
+        school_id: Optional[str] = None,
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        q: Optional[str] = None,
         ipeds_unitid: Optional[int] = None,
         region: Optional[str] = None,
         region_not: Optional[str] = None,
@@ -48,6 +53,7 @@ class Teams:
                     "division": division,
                     "gender": gender,
                     "conference": conference,
+                    "school": school, "school_id": school_id, "id": id, "name": name, "q": q,
                     "ipeds_unitid": ipeds_unitid,
                     "region": region,
                     "region_not": region_not,
@@ -58,7 +64,8 @@ class Teams:
                 },
             )
             parsed = TeamPage.model_validate(raw)
-            return SyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch)
+            return SyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch,
+                            school_resolutions=parsed.school_resolutions)
 
         return fetch(cursor)
 
@@ -210,6 +217,11 @@ class AsyncTeams:
         division: str,
         gender: Optional[str] = None,
         conference: Optional[str] = None,
+        school: Optional[str] = None,
+        school_id: Optional[str] = None,
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        q: Optional[str] = None,
         ipeds_unitid: Optional[int] = None,
         region: Optional[str] = None,
         region_not: Optional[str] = None,
@@ -230,6 +242,7 @@ class AsyncTeams:
                     "division": division,
                     "gender": gender,
                     "conference": conference,
+                    "school": school, "school_id": school_id, "id": id, "name": name, "q": q,
                     "ipeds_unitid": ipeds_unitid,
                     "region": region,
                     "region_not": region_not,
@@ -240,7 +253,8 @@ class AsyncTeams:
                 },
             )
             parsed = TeamPage.model_validate(raw)
-            return AsyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch)
+            return AsyncPage(parsed.data, parsed.next_cursor, parsed.has_more, fetch,
+                             school_resolutions=parsed.school_resolutions)
 
         return await fetch(cursor)
 

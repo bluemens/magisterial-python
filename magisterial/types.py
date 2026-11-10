@@ -5,17 +5,19 @@ from __future__ import annotations
 
 from datetime import date as date_aliased
 from enum import Enum
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import (
     AwareDatetime,
     BaseModel,
     ConfigDict,
     Field,
+    PositiveInt,
     confloat,
     conint,
     constr,
 )
+from typing_extensions import TypeAliasType
 
 
 class AlertCreateRequest(BaseModel):
@@ -320,47 +322,17 @@ class ClassStanding(BaseModel):
     )
 
 
-class CommitmentAthlete(BaseModel):
+class HighSchoolKind(Enum):
     """
-    The athlete, as the best-ranked source that lists them gives it. Most
-    are high-school students: contact details, dates of birth and social
-    accounts are never collected, so they are never here.
+    What the `high_school` text names: 'high_school' (a school; see `secondary_school`), 'college' (a college the player attended before this one), 'club' (a club or academy program), 'homeschool', 'not_a_school', or 'unresolved' (we looked and could not tell which school, or which kind of place, it is). Null when there is no `high_school` text or it has not been classified yet. `high_school` itself is always the text the source printed.
     """
 
-    club: str | None = Field(
-        None, description="Club team, where the source names one.", title="Club"
-    )
-    grad_year: int | None = Field(
-        None,
-        description="High-school graduation class. Null where the sources give only the college entry year (see `entry_year`).",
-        examples=[2027],
-        title="Grad Year",
-    )
-    high_school: str | None = Field(None, title="High School")
-    home_state: str | None = Field(
-        None, description="Two-letter US state.", examples=["OR"], title="Home State"
-    )
-    hometown_city: str | None = Field(None, title="Hometown City")
-    name: str = Field(
-        ...,
-        description="Full name in natural order.",
-        examples=["Avery Johnson"],
-        title="Name",
-    )
-    person_id: int | None = Field(
-        None,
-        description="The athlete's id, from the moment they commit: the same id on every commitment they make (a decommitment and a recommitment elsewhere share it), and the `person_id` their player record carries once they enroll, across transfers. All of an athlete's commitments: GET /v1/commitments?person_id=. In the rare case two ids turn out to be one athlete, the ids are merged: the commitment then carries the surviving id (a `commitment.updated`), and the other keeps resolving to it. Null only in the last form of a commitment retracted because its athlete record was removed.",
-        examples=[318204],
-        title="Person Id",
-    )
-    player_id: int | None = Field(
-        None,
-        description="Set once the class has enrolled and the athlete is on the committed team's roster: GET /v1/players/{player_id}. A player id is one roster stint; `person_id` is the athlete.",
-        title="Player Id",
-    )
-    position: str | None = Field(
-        None, description="As the source prints it.", examples=["MF"], title="Position"
-    )
+    high_school = "high_school"
+    college = "college"
+    club = "club"
+    homeschool = "homeschool"
+    not_a_school = "not_a_school"
+    unresolved = "unresolved"
 
 
 class CommitmentSchool(BaseModel):
@@ -453,6 +425,23 @@ class CommitmentSourceRef(BaseModel):
     )
 
 
+class Kind(Enum):
+    college = "college"
+    high_school = "high_school"
+
+
+class ProgramStatus(Enum):
+    available = "available"
+    no_program_in_scope = "no_program_in_scope"
+
+
+class DiscoveryProgram(BaseModel):
+    division: str | None = Field(None, title="Division")
+    name: str | None = Field(None, title="Name")
+    sport_path: str | None = Field(None, title="Sport Path")
+    team_id: int = Field(..., title="Team Id")
+
+
 class EligibilityRule(BaseModel):
     """
     One way a governing body counts eligibility, with its sources.
@@ -492,6 +481,11 @@ class ExportCreateRequest(BaseModel):
     gzipped flat file. Use the optional filters to keep large datasets under
     the row cap. A field this body does not declare is a 422: a mistyped
     filter must not become an unfiltered (and billed) export.
+
+    A players file ends with `positions` and `position_groups`, the
+    standardized reading of `position` (JSONL arrays; in CSV a cell of compact
+    JSON such as `["MID","FWD"]`, empty for a sport with no position vocabulary
+    and `[]` where the sport has one and the published text names no value).
     """
 
     model_config = ConfigDict(
@@ -1469,6 +1463,201 @@ class GolfTournamentSummary(BaseModel):
     )
 
 
+class HighSchool(BaseModel):
+    """
+    A secondary school in full: the object players and commitments carry
+    (`secondary_school`) plus what the registry says about it. A school that
+    closed or was renumbered stays, so alumni of it still resolve.
+    """
+
+    boarding: bool | None = Field(
+        None,
+        description="True when the school has boarding students; null where the registry does not say.",
+        title="Boarding",
+    )
+    charter: bool | None = Field(
+        None,
+        description="True for a charter school; null where the registry does not say.",
+        title="Charter",
+    )
+    city: str | None = Field(None, title="City")
+    control: str = Field(
+        ..., description="'public' or 'private'.", examples=["public"], title="Control"
+    )
+    country: str = Field(
+        ...,
+        description="ISO 3166-1 alpha-2 country code.",
+        examples=["US"],
+        title="Country",
+    )
+    county: str | None = Field(None, title="County")
+    district: str | None = Field(
+        None,
+        description="The public school district (NCES CCD LEA name) or, in Canada, the school board; null for private schools.",
+        title="District",
+    )
+    first_vintage: str | None = Field(
+        None,
+        description="First registry release that lists the school, e.g. '2014-15'.",
+        title="First Vintage",
+    )
+    highest_grade: str | None = Field(
+        None, description="Highest grade offered.", title="Highest Grade"
+    )
+    id: int = Field(
+        ...,
+        description="Our school id; use with GET /v1/high-schools/{id} and the `high_school_id` filter.",
+        title="Id",
+    )
+    last_vintage: str | None = Field(
+        None,
+        description="Latest registry release that lists the school.",
+        title="Last Vintage",
+    )
+    latitude: float | None = Field(None, title="Latitude")
+    longitude: float | None = Field(None, title="Longitude")
+    lowest_grade: str | None = Field(
+        None,
+        description="Lowest grade offered, as the registry codes it ('PK', 'KG', '09').",
+        title="Lowest Grade",
+    )
+    magnet: bool | None = Field(None, title="Magnet")
+    name: str = Field(
+        ...,
+        description="The school's name, cased for display.",
+        examples=["Lincoln High School"],
+        title="Name",
+    )
+    nces_id: str | None = Field(
+        None,
+        description="The federal NCES id: the 12-digit NCESSCH for a public school, the PPIN for a private one. Null for a school outside the NCES registries, such as a Canadian school.",
+        examples=["410279000563"],
+        title="Nces Id",
+    )
+    offers_grade_12: bool | None = Field(None, title="Offers Grade 12")
+    postal_code: str | None = Field(None, title="Postal Code")
+    registry: str = Field(
+        ...,
+        description="The registry the school comes from: 'nces_ccd', 'nces_pss', 'statcan_odef', or 'curated' (a school no registry lists, added by us after a person read it).",
+        examples=["nces_ccd"],
+        title="Registry",
+    )
+    religious_affiliation: str | None = Field(
+        None,
+        description="Private schools: the affiliation the survey records.",
+        title="Religious Affiliation",
+    )
+    school_type: str | None = Field(
+        None,
+        description="The registry's school type, e.g. 'regular', 'special education', 'vocational', 'alternative'.",
+        title="School Type",
+    )
+    state: str | None = Field(
+        None,
+        description="Two-letter US state or Canadian province code.",
+        examples=["OR"],
+        title="State",
+    )
+    status: str = Field(
+        ...,
+        description="'open', or 'closed' once the registry stops listing it.",
+        examples=["open"],
+        title="Status",
+    )
+    superseded_by: int | None = Field(
+        None,
+        description="Id of the school this one was renumbered or merged into, when the registry says so.",
+        title="Superseded By",
+    )
+    virtual: str | None = Field(
+        None,
+        description="NCES CCD's virtual status: 'full' (exclusively virtual), 'primarily', 'supplemental' or 'none'; null where the registry does not say.",
+        title="Virtual",
+    )
+
+
+class HighSchoolPage(BaseModel):
+    """
+    A page of high schools.
+    """
+
+    data: list[HighSchool] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
+    )
+
+
+class HighSchoolRef(BaseModel):
+    """
+    A secondary school from a federal or national registry: NCES's Common
+    Core of Data (public schools) and Private School Survey (private schools),
+    and Statistics Canada's open database of educational facilities. Look one
+    up with GET /v1/high-schools/{id}; find players and commitments by it
+    with `high_school_nces_id` / `high_school_id`.
+    """
+
+    charter: bool | None = Field(
+        None,
+        description="True for a charter school; null where the registry does not say.",
+        title="Charter",
+    )
+    city: str | None = Field(None, title="City")
+    control: str = Field(
+        ..., description="'public' or 'private'.", examples=["public"], title="Control"
+    )
+    country: str = Field(
+        ...,
+        description="ISO 3166-1 alpha-2 country code.",
+        examples=["US"],
+        title="Country",
+    )
+    id: int = Field(
+        ...,
+        description="Our school id; use with GET /v1/high-schools/{id} and the `high_school_id` filter.",
+        title="Id",
+    )
+    name: str = Field(
+        ...,
+        description="The school's name, cased for display.",
+        examples=["Lincoln High School"],
+        title="Name",
+    )
+    nces_id: str | None = Field(
+        None,
+        description="The federal NCES id: the 12-digit NCESSCH for a public school, the PPIN for a private one. Null for a school outside the NCES registries, such as a Canadian school.",
+        examples=["410279000563"],
+        title="Nces Id",
+    )
+    registry: str = Field(
+        ...,
+        description="The registry the school comes from: 'nces_ccd', 'nces_pss', 'statcan_odef', or 'curated' (a school no registry lists, added by us after a person read it).",
+        examples=["nces_ccd"],
+        title="Registry",
+    )
+    school_type: str | None = Field(
+        None,
+        description="The registry's school type, e.g. 'regular', 'special education', 'vocational', 'alternative'.",
+        title="School Type",
+    )
+    state: str | None = Field(
+        None,
+        description="Two-letter US state or Canadian province code.",
+        examples=["OR"],
+        title="State",
+    )
+    virtual: str | None = Field(
+        None,
+        description="NCES CCD's virtual status: 'full' (exclusively virtual), 'primarily', 'supplemental' or 'none'; null where the registry does not say.",
+        title="Virtual",
+    )
+
+
 class IceHockeyStats(BaseModel):
     """
     Season stats for ice-hockey: the stat fields GET /v1/filters/catalog lists for the sport. Every field is present on every row; null means the source did not publish it.
@@ -1736,7 +1925,21 @@ class MovementSubject(BaseModel):
     name: str | None = Field(
         None, description="Full name in natural order.", title="Name"
     )
-    position: str | None = Field(None, description="Players only.", title="Position")
+    position: str | None = Field(
+        None,
+        description="Players only. The position as the school published it ('F', 'Fwd', 'Forward', 'M/F'). Spellings differ from school to school; read `positions` and `position_groups` for one value per sport.",
+        title="Position",
+    )
+    position_groups: list[str] | None = Field(
+        None,
+        description="Players only. The broadest category of each of `positions`: baseball 'SS' is in 'INF', 'RHP' in 'P'; basketball 'PG' in 'GUARD'; ice hockey 'LW' in 'F'; football 'OT' in 'OL'. A sport whose vocabulary is flat (soccer, volleyball, lacrosse, field hockey) repeats `positions`. Null or [] exactly where `positions` is.",
+        title="Position Groups",
+    )
+    positions: list[str] | None = Field(
+        None,
+        description="Players only. The standardized position or positions `position` names, in the sport's canonical vocabulary: the values GET /v1/filters/catalog lists for the player `position` field ('GK', 'DEF', 'MID', 'FWD' in soccer; 'PG', 'SS', 'OH', 'QB', ...). A list because a school can print two: soccer 'M/F' is ['MID', 'FWD']. Each value is one you can filter by, and a `position` filter matches the row by the same reading, so a player returned for `position=FWD` carries 'FWD' here. Null for a sport with no positions (tennis, golf, swimming and diving, track and field); [] where the sport has them and the published text names none (nothing published, a role such as 'Special Teams', a spelling not yet in the vocabulary).",
+        title="Positions",
+    )
     title: str | None = Field(
         None, description="Coaches only — current title.", title="Title"
     )
@@ -1778,6 +1981,54 @@ class NumberRange(BaseModel):
     )
     max: float | None = Field(None, description="At most this.", title="Max")
     min: float | None = Field(None, description="At least this.", title="Min")
+
+
+HighSchoolId = TypeAliasType(
+    "HighSchoolId",
+    Annotated[
+        list[int],
+        Field(
+            description="Players whose `high_school` resolves to these schools, by our id (`secondary_school.id`; GET /v1/high-schools finds them).",
+            max_length=500,
+            title="High School Id",
+        ),
+    ],
+)
+
+
+PlayerId = TypeAliasType(
+    "PlayerId",
+    Annotated[
+        list[int],
+        Field(description="Only these player ids.", max_length=500, title="Player Id"),
+    ],
+)
+
+
+SchoolId = TypeAliasType(
+    "SchoolId",
+    Annotated[
+        list[int],
+        Field(
+            description="College institution IDs; every program in the requested scope.",
+            max_length=500,
+            title="School Id",
+        ),
+    ],
+)
+
+
+TeamId = TypeAliasType(
+    "TeamId",
+    Annotated[
+        list[int],
+        Field(
+            description="College program IDs, from school discovery or GET /v1/teams. Scoped as usual.",
+            max_length=500,
+            title="Team Id",
+        ),
+    ],
+)
 
 
 class PlayerSearchRequest(BaseModel):
@@ -1857,8 +2108,23 @@ class PlayerSearchRequest(BaseModel):
     )
     high_school: str | list[str] | None = Field(
         None,
-        description="High school, exact. One value, an array of values, or a comma-separated string (any of).",
+        description="High school, exact, as the source printed it. One value, an array of values, or a comma-separated string (any of).",
         title="High School",
+    )
+    high_school_id: HighSchoolId | None = Field(
+        None,
+        description="Players whose `high_school` resolves to these schools, by our id (`secondary_school.id`; GET /v1/high-schools finds them).",
+        title="High School Id",
+    )
+    high_school_kind: str | list[str] | None = Field(
+        None,
+        description="What the `high_school` text was classified as: 'high_school', 'college', 'club', 'homeschool', 'not_a_school' or 'unresolved'. Players with no classification yet are left out. One value, an array of values, or a comma-separated string (any of).",
+        title="High School Kind",
+    )
+    high_school_nces_id: str | list[str] | None = Field(
+        None,
+        description="Players whose `high_school` resolves to the school with this NCES id: the 12-digit NCESSCH of a public school or the PPIN of a private one (`secondary_school.nces_id`). Every spelling of the school's name finds the player, which `high_school` does not. An id no school carries matches nobody. One value, an array of values, or a comma-separated string (any of).",
+        title="High School Nces Id",
     )
     home_country: str | list[str] | None = Field(
         None,
@@ -1912,7 +2178,7 @@ class PlayerSearchRequest(BaseModel):
         None,
         description="Only players whose hometown is within `miles` of this point. A player whose hometown has no coordinates never matches.",
     )
-    player_id: list[int] | None = Field(
+    player_id: PlayerId | None = Field(
         None, description="Only these player ids.", title="Player Id"
     )
     position: str | list[str] | None = Field(
@@ -1934,6 +2200,16 @@ class PlayerSearchRequest(BaseModel):
         None,
         description="Exclude these values. Players with no value for the field are left out too.",
         title="Region Not",
+    )
+    school: str | list[str] | None = Field(
+        None,
+        description="Identity-aware college discovery. One scalar is one whole name; use an array for several. Names/aliases select identities; partial/typo matches return school_resolutions candidates. Persist the chosen school_id/team_id for follow-up requests.",
+        title="School",
+    )
+    school_id: SchoolId | None = Field(
+        None,
+        description="College institution IDs; every program in the requested scope.",
+        title="School Id",
     )
     season: str | list[str] | None = Field(
         None,
@@ -1981,14 +2257,19 @@ class PlayerSearchRequest(BaseModel):
         description='Swimming & diving: best-mark ranges per event code, in seconds for a swim and points for a dive, e.g. {"SCY-100-FR": {"max": 47.5}}. Needs the event in `swim_event`.',
         title="Swim Marks",
     )
+    team_id: TeamId | None = Field(
+        None,
+        description="College program IDs, from school discovery or GET /v1/teams. Scoped as usual.",
+        title="Team Id",
+    )
     team_name: str | list[str] | None = Field(
         None,
-        description="Team (school) name; resolved to the program it names. One value, an array of values, or a comma-separated string (any of).",
+        description="Team (school) name; resolved to the program it names. A recognized whole name keeps its punctuation, including commas. Use an array for several names; each item is one complete name. Legacy comma-separated strings are also accepted when the whole string does not name a program.",
         title="Team Name",
     )
     team_name_not: str | list[str] | None = Field(
         None,
-        description="Exclude these values. Players with no value for the field are left out too.",
+        description="Exclude these team names; the same name and array rules as team_name apply.",
         title="Team Name Not",
     )
     throws: str | list[str] | None = Field(
@@ -2289,19 +2570,37 @@ class SandboxEventAlert(BaseModel):
     name: str = Field(..., title="Name")
 
 
+class Status(Enum):
+    """
+    commitment_updated: the status the commitment moves to. commitment_published: `signed` publishes a signing; the default is `committed`.
+    """
+
+    committed = "committed"
+    signed = "signed"
+    decommitted = "decommitted"
+
+
 class Type(Enum):
     """
-    What happens: a portal entry, a player joining a roster, or a coach joining a staff.
+    What happens: a portal entry, a player joining a roster, a coach joining a staff, or a commitment being published, updated (signed or decommitted) or retracted.
     """
 
     portal_entry = "portal_entry"
     player_movement = "player_movement"
     coach_movement = "coach_movement"
+    commitment_published = "commitment_published"
+    commitment_updated = "commitment_updated"
+    commitment_retracted = "commitment_retracted"
 
 
 class SandboxEventRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
+    )
+    commitment_id: int | None = Field(
+        None,
+        description="commitment_updated and commitment_retracted: the commitment's `id` (GET /v1/commitments), in the scope of `sport` and `gender`.",
+        title="Commitment Id",
     )
     division: str = Field(
         ..., description="Division scope, e.g. 'D1'.", title="Division"
@@ -2315,6 +2614,11 @@ class SandboxEventRequest(BaseModel):
         title="Name",
     )
     sport: str = Field(..., description="Sport scope, e.g. 'soccer'.", title="Sport")
+    status: Status | None = Field(
+        None,
+        description="commitment_updated: the status the commitment moves to. commitment_published: `signed` publishes a signing; the default is `committed`.",
+        title="Status",
+    )
     team_id: int | None = Field(
         None,
         description="The program it happens at. Defaults to the first program in scope.",
@@ -2322,7 +2626,7 @@ class SandboxEventRequest(BaseModel):
     )
     type: Type = Field(
         ...,
-        description="What happens: a portal entry, a player joining a roster, or a coach joining a staff.",
+        description="What happens: a portal entry, a player joining a roster, a coach joining a staff, or a commitment being published, updated (signed or decommitted) or retracted.",
         title="Type",
     )
 
@@ -2344,6 +2648,61 @@ class SandboxEventResponse(BaseModel):
     delivery_event_types: list[str] | None = Field(None, title="Delivery Event Types")
     event_id: str = Field(..., title="Event Id")
     type: str = Field(..., title="Type")
+
+
+class SchoolDiscoveryRequest(BaseModel):
+    """
+    Discover one institution; use explicit arrays for several names in retrieval.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    city: constr(max_length=120) | None = Field(
+        None, description="High school's own city, not athlete hometown.", title="City"
+    )
+    country: constr(min_length=2, max_length=2) | None = Field(
+        None, description="High school's ISO country code.", title="Country"
+    )
+    division: str | None = Field(
+        None, description="Required for colleges; program scope only.", title="Division"
+    )
+    gender: str | None = Field(None, title="Gender")
+    high_school_id: PositiveInt | None = Field(
+        None, description="Secondary-school registry ID.", title="High School Id"
+    )
+    ipeds_unitid: PositiveInt | None = Field(
+        None, description="College federal IPEDS ID.", title="Ipeds Unitid"
+    )
+    kind: Kind | None = Field("college", title="Kind")
+    nces_id: constr(min_length=1, max_length=20) | None = Field(
+        None,
+        description="Secondary-school NCES string ID; preserve leading zeroes.",
+        title="Nces Id",
+    )
+    query: constr(min_length=1, max_length=200) | None = Field(
+        None,
+        description="One whole school name, including punctuation, alias or qualifier.",
+        title="Query",
+    )
+    school_id: PositiveInt | None = Field(
+        None, description="College institution ID (schools.id).", title="School Id"
+    )
+    sport: str | None = Field(
+        None, description="Required for colleges; program scope only.", title="Sport"
+    )
+    state: constr(min_length=2, max_length=2) | None = Field(
+        None,
+        description="High school's US state/Canadian province code. For colleges put qualifiers in query.",
+        title="State",
+    )
+
+
+class Status1(Enum):
+    resolved = "resolved"
+    candidates = "candidates"
+    ambiguous = "ambiguous"
+    unresolved = "unresolved"
 
 
 class SchoolMajor(BaseModel):
@@ -2570,7 +2929,7 @@ class OfficialRecordSource(Enum):
     held_games = "held_games"
 
 
-class Status(Enum):
+class Status2(Enum):
     """
     'complete': `games_held` equals `games_played` and, where the school's record was read, `record_from_held_games` equals `official_record`. 'partial': `games_held` is below `games_played`, so the season is short (`missing_games` says by how many). 'inconsistent': `games_held` is above `games_played`, or equal to it with a different record: a held game is not one the school counts, or a held result differs from the school's, so `record_from_held_games` is not the season's record. 'unverified': the team's schedule has not been read for the season, so there is nothing to compare `games_held` against; the season may or may not be complete.
     """
@@ -2607,7 +2966,7 @@ class SeasonSchedule(BaseModel):
     )
     games_with_box_scores: int | None = Field(
         None,
-        description="Of `games_held`, how many have a team box score for this team. Null for a sport with no game box scores (track and field).",
+        description="Of `games_held`, how many have a box score for this team. In tennis a dual's box score is its line results (doubles and singles), so a dual counts when any of its lines is held. Null for a sport with no game box scores (track and field).",
         title="Games With Box Scores",
     )
     missing_games: int | None = Field(
@@ -2638,7 +2997,7 @@ class SeasonSchedule(BaseModel):
         description="Which kind of site the schedule was read from: 'sidearm', 'presto' or 'wmt'.",
         title="Schedule Source",
     )
-    status: Status = Field(
+    status: Status2 = Field(
         ...,
         description="'complete': `games_held` equals `games_played` and, where the school's record was read, `record_from_held_games` equals `official_record`. 'partial': `games_held` is below `games_played`, so the season is short (`missing_games` says by how many). 'inconsistent': `games_held` is above `games_played`, or equal to it with a different record: a held game is not one the school counts, or a held result differs from the school's, so `record_from_held_games` is not the season's record. 'unverified': the team's schedule has not been read for the season, so there is nothing to compare `games_held` against; the season may or may not be complete.",
         title="Status",
@@ -2964,6 +3323,16 @@ class TeamCoachEntry(BaseModel):
     )
     season: str | None = Field(
         None, description="Season this staff row belongs to.", title="Season"
+    )
+    staff_category: str | None = Field(
+        None,
+        description="Whether this person is coaching staff, set from `role` by the database on every write: `coach`, `program_staff` (operations, video, recruiting, analysts, managers), `support_staff` (athletic training, communications, strength, academics, administration, ...), `not_staff`, `unclassified` (the title is not a job title) or `unknown` (no title published). The list holds the staff page the school publishes for the sport, so it includes non-coaches; filter with `staff_category=coach` for coaches only.",
+        title="Staff Category",
+    )
+    staff_function: str | None = Field(
+        None,
+        description="The specific job behind `staff_category`, e.g. `coach`, `athletic_training`, `sports_information`, `strength_conditioning`, `administration`, `video`, `analyst`, `operations`.",
+        title="Staff Function",
     )
 
 
@@ -3774,6 +4143,75 @@ class AlertListResponse(BaseModel):
     data: list[AlertSummary] = Field(..., title="Data")
 
 
+class CommitmentAthlete(BaseModel):
+    """
+    The athlete, as the best-ranked source that lists them gives it. Most
+    are high-school students: contact details, dates of birth and social
+    accounts are never collected, so they are never here.
+    """
+
+    club: str | None = Field(
+        None, description="Club team, where the source names one.", title="Club"
+    )
+    grad_year: int | None = Field(
+        None,
+        description="High-school graduation class. Null where the sources give only the college entry year (see `entry_year`).",
+        examples=[2027],
+        title="Grad Year",
+    )
+    high_school: str | None = Field(
+        None, description="As the source printed it.", title="High School"
+    )
+    high_school_kind: HighSchoolKind | None = Field(
+        None,
+        description="What the `high_school` text names: 'high_school' (a school; see `secondary_school`), 'college' (a college the player attended before this one), 'club' (a club or academy program), 'homeschool', 'not_a_school', or 'unresolved' (we looked and could not tell which school, or which kind of place, it is). Null when there is no `high_school` text or it has not been classified yet. `high_school` itself is always the text the source printed.",
+        title="High School Kind",
+    )
+    home_state: str | None = Field(
+        None, description="Two-letter US state.", examples=["OR"], title="Home State"
+    )
+    hometown_city: str | None = Field(None, title="Hometown City")
+    name: str = Field(
+        ...,
+        description="Full name in natural order.",
+        examples=["Avery Johnson"],
+        title="Name",
+    )
+    person_id: int | None = Field(
+        None,
+        description="The athlete's id, from the moment they commit: the same id on every commitment they make (a decommitment and a recommitment elsewhere share it), and the `person_id` their player record carries once they enroll, across transfers. All of an athlete's commitments: GET /v1/commitments?person_id=. In the rare case two ids turn out to be one athlete, the ids are merged: the commitment then carries the surviving id (a `commitment.updated`), and the other keeps resolving to it. Null only in the last form of a commitment retracted because its athlete record was removed.",
+        examples=[318204],
+        title="Person Id",
+    )
+    player_id: int | None = Field(
+        None,
+        description="Set once the class has enrolled and the athlete is on the committed team's roster: GET /v1/players/{player_id}. A player id is one roster stint; `person_id` is the athlete.",
+        title="Player Id",
+    )
+    position: str | None = Field(
+        None,
+        description="As the recruiting source prints it ('MF', 'CM', 'ATH'); sources differ. Read `positions` and `position_groups` for one value per sport.",
+        examples=["MF"],
+        title="Position",
+    )
+    position_groups: list[str] | None = Field(
+        None,
+        description="The broadest category of each of `positions`: baseball 'SS' is in 'INF', 'RHP' in 'P'; basketball 'PG' in 'GUARD'; ice hockey 'LW' in 'F'; football 'OT' in 'OL'. A sport whose vocabulary is flat (soccer, volleyball, lacrosse, field hockey) repeats `positions`. Null or [] exactly where `positions` is. Read the same way as `positions`.",
+        examples=[["MID"]],
+        title="Position Groups",
+    )
+    positions: list[str] | None = Field(
+        None,
+        description="The standardized position or positions `position` names, in the sport's canonical vocabulary: the values GET /v1/filters/catalog lists for the player `position` field ('GK', 'DEF', 'MID', 'FWD' in soccer; 'PG', 'SS', 'OH', 'QB', ...). A list because a school can print two: soccer 'M/F' is ['MID', 'FWD']. Each value is one you can filter by, and a `position` filter matches the row by the same reading, so a player returned for `position=FWD` carries 'FWD' here. Null for a sport with no positions (tennis, golf, swimming and diving, track and field); [] where the sport has them and the published text names none (nothing published, a role such as 'Special Teams', a spelling not yet in the vocabulary). Read from the commitment's sport and `position` when the commitment is served or sent, the same on a GET and in a webhook: a vocabulary change reaches every commitment at once, without a revision or a `commitment.updated`.",
+        examples=[["MID"]],
+        title="Positions",
+    )
+    secondary_school: HighSchoolRef | None = Field(
+        None,
+        description="The registry school `high_school` names, when `high_school_kind` is 'high_school'; null otherwise. Read when the commitment is built: a school linked or corrected later shows here without a new revision or a `commitment.updated`. Filter by it with `high_school_nces_id`.",
+    )
+
+
 class CommitmentEntry(BaseModel):
     """
     One athlete's commitment to one college program, reconciled across
@@ -3863,6 +4301,42 @@ class CommitmentPage(BaseModel):
         description="Opaque cursor for the next page; null when there are no more results.",
         examples=["eyJvZmZzZXQiOiAyNX0="],
         title="Next Cursor",
+    )
+
+
+class DiscoveryCandidate(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    all_team_ids: list[int] | None = Field(None, title="All Team Ids")
+    city: str | None = Field(None, title="City")
+    country: str | None = Field(
+        None, description="ISO code, or null when not held.", title="Country"
+    )
+    divisions: list[str] | None = Field(None, title="Divisions")
+    high_school_id: int | None = Field(
+        None, description="Secondary-school ID only.", title="High School Id"
+    )
+    in_scope_team_ids: list[int] | None = Field(
+        None,
+        description="College programs satisfying sport AND division.",
+        title="In Scope Team Ids",
+    )
+    ipeds_unitid: int | None = Field(None, title="Ipeds Unitid")
+    kind: Kind = Field(..., title="Kind")
+    name: str = Field(..., title="Name")
+    names: list[str] | None = Field(None, title="Names")
+    nces_id: str | None = Field(None, title="Nces Id")
+    program_status: ProgramStatus | None = Field(None, title="Program Status")
+    programs: list[DiscoveryProgram] | None = Field(None, title="Programs")
+    school_id: int | None = Field(
+        None, description="College institution ID only.", title="School Id"
+    )
+    state: str | None = Field(None, title="State")
+    team_ids: list[int] | None = Field(
+        None,
+        description="College programs in the requested sport, all divisions.",
+        title="Team Ids",
     )
 
 
@@ -4147,7 +4621,15 @@ class PlayerDetail(BaseModel):
         None, description="Formatted height, e.g. '6-2'.", title="Height"
     )
     height_inches: int | None = Field(None, title="Height Inches")
-    high_school: str | None = Field(None, title="High School")
+    high_school: str | None = Field(
+        None, description="As the source printed it.", title="High School"
+    )
+    high_school_kind: HighSchoolKind | None = Field(
+        None,
+        description="What the `high_school` text names: 'high_school' (a school; see `secondary_school`), 'college' (a college the player attended before this one), 'club' (a club or academy program), 'homeschool', 'not_a_school', or 'unresolved' (we looked and could not tell which school, or which kind of place, it is). Null when there is no `high_school` text or it has not been classified yet. `high_school` itself is always the text the source printed.",
+        examples=["high_school"],
+        title="High School Kind",
+    )
     home_city: str | None = Field(None, title="Home City")
     home_country: str | None = Field(None, title="Home Country")
     home_state: str | None = Field(None, title="Home State")
@@ -4182,7 +4664,23 @@ class PlayerDetail(BaseModel):
         description="Cross-program person id; use with GET /v1/persons/{person_id}.",
         title="Person Id",
     )
-    position: str | None = Field(None, title="Position")
+    position: str | None = Field(
+        None,
+        description="The position as the school published it ('F', 'Fwd', 'Forward', 'M/F'). Spellings differ from school to school; read `positions` and `position_groups` for one value per sport.",
+        title="Position",
+    )
+    position_groups: list[str] | None = Field(
+        None,
+        description="The broadest category of each of `positions`: baseball 'SS' is in 'INF', 'RHP' in 'P'; basketball 'PG' in 'GUARD'; ice hockey 'LW' in 'F'; football 'OT' in 'OL'. A sport whose vocabulary is flat (soccer, volleyball, lacrosse, field hockey) repeats `positions`. Null or [] exactly where `positions` is.",
+        examples=[["MID"]],
+        title="Position Groups",
+    )
+    positions: list[str] | None = Field(
+        None,
+        description="The standardized position or positions `position` names, in the sport's canonical vocabulary: the values GET /v1/filters/catalog lists for the player `position` field ('GK', 'DEF', 'MID', 'FWD' in soccer; 'PG', 'SS', 'OH', 'QB', ...). A list because a school can print two: soccer 'M/F' is ['MID', 'FWD']. Each value is one you can filter by, and a `position` filter matches the row by the same reading, so a player returned for `position=FWD` carries 'FWD' here. Null for a sport with no positions (tennis, golf, swimming and diving, track and field); [] where the sport has them and the published text names none (nothing published, a role such as 'Special Teams', a spelling not yet in the vocabulary).",
+        examples=[["MID"]],
+        title="Positions",
+    )
     previous_school: str | None = Field(
         None,
         description="The school or schools the athlete came from, as their newest roster or profile page at this team lists them; several are joined with ' / ', e.g. 'Papillion La Vista H.S. / Iowa Western CC'.",
@@ -4198,6 +4696,10 @@ class PlayerDetail(BaseModel):
         deprecated=True,
         description="Deprecated, removed on 2027-01-12: use `stats_by_season`, `stats_totals` and `track_bests`. An object keyed 'season_<year>' (and 'cumulative_null'), each a one-item list holding the season row.",
         title="Season Stats",
+    )
+    secondary_school: HighSchoolRef | None = Field(
+        None,
+        description="The registry school `high_school` names, when `high_school_kind` is 'high_school'; null otherwise.",
     )
     sport: str | None = Field(
         None,
@@ -4331,7 +4833,14 @@ class RosterEntry(BaseModel):
         None, description="Formatted height, e.g. '6-2'.", title="Height"
     )
     height_inches: int | None = Field(None, title="Height Inches")
-    high_school: str | None = Field(None, title="High School")
+    high_school: str | None = Field(
+        None, description="As the source printed it.", title="High School"
+    )
+    high_school_kind: HighSchoolKind | None = Field(
+        None,
+        description="What the `high_school` text names: 'high_school' (a school; see `secondary_school`), 'college' (a college the player attended before this one), 'club' (a club or academy program), 'homeschool', 'not_a_school', or 'unresolved' (we looked and could not tell which school, or which kind of place, it is). Null when there is no `high_school` text or it has not been classified yet. `high_school` itself is always the text the source printed.",
+        title="High School Kind",
+    )
     home_city: str | None = Field(None, title="Home City")
     home_country: str | None = Field(None, title="Home Country")
     home_state: str | None = Field(None, title="Home State")
@@ -4357,11 +4866,31 @@ class RosterEntry(BaseModel):
         title="Name",
     )
     person_id: int | None = Field(None, title="Person Id")
-    position: str | None = Field(None, title="Position")
+    position: str | None = Field(
+        None,
+        description="The position as the school published it ('F', 'Fwd', 'Forward', 'M/F'). Spellings differ from school to school; read `positions` and `position_groups` for one value per sport.",
+        title="Position",
+    )
+    position_groups: list[str] | None = Field(
+        None,
+        description="The broadest category of each of `positions`: baseball 'SS' is in 'INF', 'RHP' in 'P'; basketball 'PG' in 'GUARD'; ice hockey 'LW' in 'F'; football 'OT' in 'OL'. A sport whose vocabulary is flat (soccer, volleyball, lacrosse, field hockey) repeats `positions`. Null or [] exactly where `positions` is.",
+        examples=[["MID"]],
+        title="Position Groups",
+    )
+    positions: list[str] | None = Field(
+        None,
+        description="The standardized position or positions `position` names, in the sport's canonical vocabulary: the values GET /v1/filters/catalog lists for the player `position` field ('GK', 'DEF', 'MID', 'FWD' in soccer; 'PG', 'SS', 'OH', 'QB', ...). A list because a school can print two: soccer 'M/F' is ['MID', 'FWD']. Each value is one you can filter by, and a `position` filter matches the row by the same reading, so a player returned for `position=FWD` carries 'FWD' here. Null for a sport with no positions (tennis, golf, swimming and diving, track and field); [] where the sport has them and the published text names none (nothing published, a role such as 'Special Teams', a spelling not yet in the vocabulary).",
+        examples=[["MID"]],
+        title="Positions",
+    )
     previous_school: str | None = Field(
         None,
         description="The school or schools that season's roster lists the athlete as coming from.",
         title="Previous School",
+    )
+    secondary_school: HighSchoolRef | None = Field(
+        None,
+        description="The registry school `high_school` names, when `high_school_kind` is 'high_school'; null otherwise.",
     )
 
 
@@ -4429,6 +4958,28 @@ class SchoolDetail(BaseModel):
         None, description="Two-letter US state code, when known.", title="State"
     )
     teams: list[SchoolTeamRef] | None = Field(None, title="Teams")
+
+
+class SchoolDiscoveryResponse(BaseModel):
+    candidates: list[DiscoveryCandidate] | None = Field(
+        None,
+        description="Ranked identities, with location, external IDs and college programs. Candidate IDs are suggestions until selected.",
+        title="Candidates",
+    )
+    division: str | None = Field(None, title="Division")
+    kind: Kind = Field(..., title="Kind")
+    method: str | None = Field(None, title="Method")
+    more_candidates: int | bool | None = Field(False, title="More Candidates")
+    next_step: str = Field(..., title="Next Step")
+    notes: list[str] | None = Field(None, title="Notes")
+    passed_over: list[dict[str, Any]] | None = Field(None, title="Passed Over")
+    query: str | None = Field(None, title="Query")
+    selected: DiscoveryCandidate | None = Field(
+        None,
+        description="Automatically identified institution, or null when context must select a candidate.",
+    )
+    sport_path: str | None = Field(None, title="Sport Path")
+    status: Status1 = Field(..., title="Status")
 
 
 class SchoolPage(BaseModel):
@@ -4673,6 +5224,9 @@ class TeamPage(BaseModel):
         examples=["eyJvZmZzZXQiOiAyNX0="],
         title="Next Cursor",
     )
+    school_resolutions: list[SchoolDiscoveryResponse] | None = Field(
+        None, title="School Resolutions"
+    )
 
 
 class TennisMatch(BaseModel):
@@ -4877,7 +5431,15 @@ class PlayerSummary(BaseModel):
         None, description="Formatted height, e.g. '6-2'.", title="Height"
     )
     height_inches: int | None = Field(None, title="Height Inches")
-    high_school: str | None = Field(None, title="High School")
+    high_school: str | None = Field(
+        None, description="As the source printed it.", title="High School"
+    )
+    high_school_kind: HighSchoolKind | None = Field(
+        None,
+        description="What the `high_school` text names: 'high_school' (a school; see `secondary_school`), 'college' (a college the player attended before this one), 'club' (a club or academy program), 'homeschool', 'not_a_school', or 'unresolved' (we looked and could not tell which school, or which kind of place, it is). Null when there is no `high_school` text or it has not been classified yet. `high_school` itself is always the text the source printed.",
+        examples=["high_school"],
+        title="High School Kind",
+    )
     home_city: str | None = Field(None, title="Home City")
     home_country: str | None = Field(None, title="Home Country")
     home_state: str | None = Field(None, title="Home State")
@@ -4912,7 +5474,23 @@ class PlayerSummary(BaseModel):
         description="Cross-program person id; use with GET /v1/persons/{person_id}.",
         title="Person Id",
     )
-    position: str | None = Field(None, title="Position")
+    position: str | None = Field(
+        None,
+        description="The position as the school published it ('F', 'Fwd', 'Forward', 'M/F'). Spellings differ from school to school; read `positions` and `position_groups` for one value per sport.",
+        title="Position",
+    )
+    position_groups: list[str] | None = Field(
+        None,
+        description="The broadest category of each of `positions`: baseball 'SS' is in 'INF', 'RHP' in 'P'; basketball 'PG' in 'GUARD'; ice hockey 'LW' in 'F'; football 'OT' in 'OL'. A sport whose vocabulary is flat (soccer, volleyball, lacrosse, field hockey) repeats `positions`. Null or [] exactly where `positions` is.",
+        examples=[["MID"]],
+        title="Position Groups",
+    )
+    positions: list[str] | None = Field(
+        None,
+        description="The standardized position or positions `position` names, in the sport's canonical vocabulary: the values GET /v1/filters/catalog lists for the player `position` field ('GK', 'DEF', 'MID', 'FWD' in soccer; 'PG', 'SS', 'OH', 'QB', ...). A list because a school can print two: soccer 'M/F' is ['MID', 'FWD']. Each value is one you can filter by, and a `position` filter matches the row by the same reading, so a player returned for `position=FWD` carries 'FWD' here. Null for a sport with no positions (tennis, golf, swimming and diving, track and field); [] where the sport has them and the published text names none (nothing published, a role such as 'Special Teams', a spelling not yet in the vocabulary).",
+        examples=[["MID"]],
+        title="Positions",
+    )
     region: str | None = Field(
         None,
         description="The association's region, for NJCAA and NCCAA teams: the team's region, e.g. 'NJCAA Region IV'. Null for every other team. A region is not a conference: an NJCAA team can have both.",
@@ -4920,6 +5498,10 @@ class PlayerSummary(BaseModel):
     )
     season: str | None = Field(
         None, description="Season the stats belong to, e.g. '2026'.", title="Season"
+    )
+    secondary_school: HighSchoolRef | None = Field(
+        None,
+        description="The registry school `high_school` names, when `high_school_kind` is 'high_school'; null otherwise.",
     )
     sport: str | None = Field(
         None,
@@ -5002,4 +5584,7 @@ class PlayerSearchPage(BaseModel):
         description="Opaque cursor for the next page; null when there are no more results.",
         examples=["eyJvZmZzZXQiOiAyNX0="],
         title="Next Cursor",
+    )
+    school_resolutions: list[SchoolDiscoveryResponse] | None = Field(
+        None, title="School Resolutions"
     )

@@ -770,3 +770,30 @@ def test_a_validation_error_reads_the_envelope_message():
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
+
+
+def test_school_discovery_and_id_followup():
+    name = "California State University, Bakersfield"
+    evidence = {
+        "kind": "college", "status": "resolved",
+        "selected": {"kind": "college", "name": name, "school_id": 990,
+                     "in_scope_team_ids": [1554]},
+        "next_step": "Use the selected program ID.",
+    }
+    def handler(request):
+        body = json.loads(request.content)
+        if request.url.path == "/v1/schools/resolve":
+            assert request.method == "POST"
+            assert body["query"] == name
+            return json_response(200, evidence)
+        assert request.url.path == "/v1/players/search"
+        assert body["team_id"] == [1554]
+        assert body["school"] == [name]
+        return json_response(200, {"data": [], "has_more": False,
+                                   "school_resolutions": [evidence]})
+    with make_client(handler) as client:
+        found = client.schools.resolve(query=name, sport="soccer", gender="women", division="D1")
+        assert found.selected.school_id == 990
+        page = client.players.search(sport="soccer", gender="women", division="D1",
+                                     team_id=found.selected.in_scope_team_ids, school=[name])
+        assert page.school_resolutions[0].selected.school_id == 990

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from .._pagination import AsyncPage, SyncPage
 from ..types import (
@@ -30,6 +30,7 @@ def _search_body(
     sort_order: Optional[str],
     limit: Optional[int],
     cursor: Optional[str],
+    **identity_filters: Any,
 ) -> Dict[str, Any]:
     body: Dict[str, Any] = {"sport": sport, "division": division}
     for key, value in (
@@ -48,6 +49,7 @@ def _search_body(
     ):
         if value is not None:
             body[key] = value
+    body.update({k: v for k, v in identity_filters.items() if v is not None})
     return body
 
 
@@ -61,7 +63,12 @@ class Players:
         sport: str,
         division: str,
         gender: Optional[str] = None,
-        team_name: Optional[str] = None,
+        team_name: Optional[Union[str, List[str]]] = None,
+        school: Optional[Union[str, List[str]]] = None,
+        school_id: Optional[List[int]] = None,
+        team_id: Optional[List[int]] = None,
+        high_school_id: Optional[List[int]] = None,
+        high_school_nces_id: Optional[Union[str, List[str]]] = None,
         conference: Optional[str] = None,
         position: Optional[str] = None,
         class_year: Optional[str] = None,
@@ -78,7 +85,8 @@ class Players:
         body = _search_body(
             sport, division, gender, team_name, conference, position,
             class_year, hometown, major, season, sort_by, sort_order,
-            limit, cursor,
+            limit, cursor, school=school, school_id=school_id, team_id=team_id,
+            high_school_id=high_school_id, high_school_nces_id=high_school_nces_id,
         )
 
         def fetch(page_body: Dict[str, Any]) -> SyncPage[PlayerSummary]:
@@ -92,6 +100,7 @@ class Players:
                 parsed.next_cursor,
                 parsed.has_more,
                 lambda c: fetch({**page_body, "cursor": c}),
+                school_resolutions=parsed.school_resolutions,
             )
 
         return fetch(body)
@@ -180,7 +189,12 @@ class AsyncPlayers:
         sport: str,
         division: str,
         gender: Optional[str] = None,
-        team_name: Optional[str] = None,
+        team_name: Optional[Union[str, List[str]]] = None,
+        school: Optional[Union[str, List[str]]] = None,
+        school_id: Optional[List[int]] = None,
+        team_id: Optional[List[int]] = None,
+        high_school_id: Optional[List[int]] = None,
+        high_school_nces_id: Optional[Union[str, List[str]]] = None,
         conference: Optional[str] = None,
         position: Optional[str] = None,
         class_year: Optional[str] = None,
@@ -197,7 +211,8 @@ class AsyncPlayers:
         body = _search_body(
             sport, division, gender, team_name, conference, position,
             class_year, hometown, major, season, sort_by, sort_order,
-            limit, cursor,
+            limit, cursor, school=school, school_id=school_id, team_id=team_id,
+            high_school_id=high_school_id, high_school_nces_id=high_school_nces_id,
         )
 
         async def fetch(page_body: Dict[str, Any]) -> AsyncPage[PlayerSummary]:
@@ -210,6 +225,7 @@ class AsyncPlayers:
                 parsed.next_cursor,
                 parsed.has_more,
                 lambda c: fetch({**page_body, "cursor": c}),
+                school_resolutions=parsed.school_resolutions,
             )
 
         return await fetch(body)
