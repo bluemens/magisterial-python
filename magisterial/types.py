@@ -367,7 +367,9 @@ class CommitmentSourceInfo(BaseModel):
         title="Last Complete Read At",
     )
     last_read_at: AwareDatetime | None = Field(
-        None, description="Its most recent finished pass.", title="Last Read At"
+        None,
+        description="Its most recent completed or partial source read. Failed attempts and reprocessing of stored observations do not advance this timestamp.",
+        title="Last Read At",
     )
     name: str = Field(..., examples=["FieldLevel"], title="Name")
     self_reported: bool = Field(..., title="Self Reported")
@@ -1882,7 +1884,12 @@ class MovementCounterpart(BaseModel):
     named a different school; never inferred from career history.
     """
 
-    division: str | None = Field(None, title="Division")
+    conference: str | None = Field(
+        None, description="Conference of the other school's team.", title="Conference"
+    )
+    division: str | None = Field(
+        None, description="Division of the other school's team.", title="Division"
+    )
     school_id: int | None = Field(
         None,
         description="School id; see GET /v1/schools/{school_id}.",
@@ -1890,6 +1897,14 @@ class MovementCounterpart(BaseModel):
     )
     school_logo_url: str | None = Field(None, title="School Logo Url")
     school_name: str | None = Field(None, title="School Name")
+    season: str | None = Field(
+        None,
+        description="The season that anchors the other side: the last season at the origin school for an addition, the first season at the destination for a removal.",
+        title="Season",
+    )
+    sport_path: str | None = Field(
+        None, description="Sport of the other school's team.", title="Sport Path"
+    )
     team_id: int | None = Field(None, title="Team Id")
 
 
@@ -1945,6 +1960,38 @@ class MovementSubject(BaseModel):
     )
     to_title: str | None = Field(
         None, description="Coaches, title changes only.", title="To Title"
+    )
+
+
+class MovementTransfer(BaseModel):
+    """
+    The transfer edge behind a player movement, with both sides spelled
+    out so the direction never depends on the event type. The same record
+    GET /v1/transfers and GET /v1/persons/{person_id}/transfers return,
+    without the link evidence.
+    """
+
+    first_season_to: str | None = Field(
+        None,
+        description="First season at the destination school.",
+        title="First Season To",
+    )
+    from_conference: str | None = Field(None, title="From Conference")
+    from_division: str | None = Field(None, title="From Division")
+    from_team_id: int | None = Field(
+        None, description="Origin team id.", title="From Team Id"
+    )
+    id: int | None = Field(
+        None, description="Transfer id; see GET /v1/transfers.", title="Id"
+    )
+    last_season_from: str | None = Field(
+        None, description="Last season at the origin school.", title="Last Season From"
+    )
+    sport_path: str | None = Field(None, title="Sport Path")
+    to_conference: str | None = Field(None, title="To Conference")
+    to_division: str | None = Field(None, title="To Division")
+    to_team_id: int | None = Field(
+        None, description="Destination team id.", title="To Team Id"
     )
 
 
@@ -2264,7 +2311,7 @@ class PlayerSearchRequest(BaseModel):
     )
     team_name: str | list[str] | None = Field(
         None,
-        description="Team (school) name; resolved to the program it names. A recognized whole name keeps its punctuation, including commas. Use an array for several names; each item is one complete name. Legacy comma-separated strings are also accepted when the whole string does not name a program.",
+        description="Team (school) name; resolved to the program it names. A recognized whole name keeps its punctuation, including commas. Use an array for several names; each item is one complete name. Comma-separated strings are also accepted when the whole string does not name a program.",
         title="Team Name",
     )
     team_name_not: str | list[str] | None = Field(
@@ -2831,11 +2878,20 @@ class SchoolRef(BaseModel):
         description="The school's official athletics website domain (the source of its program data).",
         title="Athletics Domain",
     )
-    city: str | None = Field(None, title="City")
+    city: str | None = Field(
+        None,
+        description="City of the campus that fields the school's teams. Null when the school is not placed, or when its program plays on several campuses and none is its home.",
+        title="City",
+    )
     control: str | None = Field(
         None,
         description="Institutional control, e.g. 'Public' or 'Private nonprofit'.",
         title="Control",
+    )
+    country: str | None = Field(
+        None,
+        description="ISO 3166-1 alpha-2 country code: 'US' (territories included) or 'CA'. Null when the school is not placed. Held for schools with no federal record too.",
+        title="Country",
     )
     id: int = Field(
         ..., description="School id; use with GET /v1/schools/{school_id}.", title="Id"
@@ -2848,7 +2904,9 @@ class SchoolRef(BaseModel):
     name: str | None = Field(None, title="Name")
     slug: str | None = Field(None, description="Stable school slug.", title="Slug")
     state: str | None = Field(
-        None, description="Two-letter US state code, when known.", title="State"
+        None,
+        description="Two-letter code: a US state, DC or territory (USPS, e.g. 'PR'), or a Canadian province (e.g. 'BC'). Null when the school is not placed.",
+        title="State",
     )
 
 
@@ -2863,11 +2921,20 @@ class SchoolSummary(BaseModel):
         description="The school's official athletics website domain (the source of its program data).",
         title="Athletics Domain",
     )
-    city: str | None = Field(None, title="City")
+    city: str | None = Field(
+        None,
+        description="City of the campus that fields the school's teams. Null when the school is not placed, or when its program plays on several campuses and none is its home.",
+        title="City",
+    )
     control: str | None = Field(
         None,
         description="Institutional control, e.g. 'Public' or 'Private nonprofit'.",
         title="Control",
+    )
+    country: str | None = Field(
+        None,
+        description="ISO 3166-1 alpha-2 country code: 'US' (territories included) or 'CA'. Null when the school is not placed. Held for schools with no federal record too.",
+        title="Country",
     )
     id: int = Field(
         ..., description="School id; use with GET /v1/schools/{school_id}.", title="Id"
@@ -2884,7 +2951,9 @@ class SchoolSummary(BaseModel):
     )
     slug: str | None = Field(None, description="Stable school slug.", title="Slug")
     state: str | None = Field(
-        None, description="Two-letter US state code, when known.", title="State"
+        None,
+        description="Two-letter code: a US state, DC or territory (USPS, e.g. 'PR'), or a Canadian province (e.g. 'BC'). Null when the school is not placed.",
+        title="State",
     )
 
 
@@ -3276,7 +3345,7 @@ class TeamCoachEntry(BaseModel):
     """
     One member of a team's coaching staff for a season. `email` and `phone`
     are populated when the response says `contacts_included` (see the Coach
-    contacts section) and the coach has not opted out of contact.
+    contacts section) and the data source publishes them.
     """
 
     bio_text: str | None = Field(
@@ -3287,14 +3356,9 @@ class TeamCoachEntry(BaseModel):
     bio_url: str | None = Field(
         None, description="Coach bio page on the school site.", title="Bio Url"
     )
-    contact_opt_out: bool | None = Field(
-        None,
-        description="True when this coach asked not to be contacted, so `email` and `phone` are withheld; false otherwise. Null when the response has `contacts_included` false.",
-        title="Contact Opt Out",
-    )
     email: str | None = Field(
         None,
-        description="Published coach email. Null when the response has `contacts_included` false, when the coach opted out of contact, or when none is published.",
+        description="Published coach email. Null when the response has `contacts_included` false or when none is published.",
         title="Email",
     )
     headshot_url: str | None = Field(None, title="Headshot Url")
@@ -3928,6 +3992,11 @@ class TrackBest(BaseModel):
     best_mark_seconds: float | None = Field(
         None, description="Times: lower is better.", title="Best Mark Seconds"
     )
+    best_performance_id: int | None = Field(
+        None,
+        description="Player history only: ID of the result behind this best.",
+        title="Best Performance Id",
+    )
     best_points: float | None = Field(
         None, description="Combined events: higher is better.", title="Best Points"
     )
@@ -3968,6 +4037,16 @@ class TrackBest(BaseModel):
         description="Season of the mark; null for a best across every season held.",
         title="Season",
     )
+    source_team_id: int | None = Field(
+        None,
+        description="Program the athlete competed for on the best result, when resolved.",
+        title="Source Team Id",
+    )
+    source_team_name: str | None = Field(
+        None,
+        description="Name of the competing program on the best result, when resolved.",
+        title="Source Team Name",
+    )
     window: str | None = Field(
         None,
         description="What the best was taken over, e.g. 'Career' or 'Selected seasons'.",
@@ -3988,6 +4067,68 @@ class TrackSummary(BaseModel):
         None,
         description="Standard discipline group, e.g. 'sprints', 'distance', 'throws'.",
         title="Primary Discipline",
+    )
+
+
+class TransferFeedRecord(BaseModel):
+    """
+    One school-change edge in the bulk feed, with both schools named.
+    """
+
+    created_at: AwareDatetime | None = Field(
+        None,
+        description="When the edge was recorded (UTC). The clock `since` filters on.",
+        title="Created At",
+    )
+    first_season_to: str | None = Field(
+        None,
+        description="First season at the destination school.",
+        title="First Season To",
+    )
+    from_conference: str | None = Field(None, title="From Conference")
+    from_division: str | None = Field(None, title="From Division")
+    from_school_id: int | None = Field(
+        None,
+        description="Origin school id; see GET /v1/schools/{school_id}.",
+        title="From School Id",
+    )
+    from_school_name: str | None = Field(None, title="From School Name")
+    from_team_id: int | None = Field(
+        None, description="Origin team id.", title="From Team Id"
+    )
+    id: int = Field(..., title="Id")
+    last_season_from: str | None = Field(
+        None, description="Last season at the origin school.", title="Last Season From"
+    )
+    person_id: int | None = Field(
+        None, description="See GET /v1/persons/{person_id}.", title="Person Id"
+    )
+    sport_path: str | None = Field(None, title="Sport Path")
+    to_conference: str | None = Field(None, title="To Conference")
+    to_division: str | None = Field(None, title="To Division")
+    to_school_id: int | None = Field(
+        None, description="Destination school id.", title="To School Id"
+    )
+    to_school_name: str | None = Field(None, title="To School Name")
+    to_team_id: int | None = Field(
+        None, description="Destination team id.", title="To Team Id"
+    )
+
+
+class TransferPage(BaseModel):
+    """
+    One page of the transfers feed.
+    """
+
+    data: list[TransferFeedRecord] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
     )
 
 
@@ -4551,9 +4692,13 @@ class MovementEntry(BaseModel):
     )
     subject: MovementSubject
     team_id: int | None = Field(None, title="Team Id")
+    transfer: MovementTransfer | None = Field(
+        None,
+        description="That transfer edge with both sides named (`from_team_id`, `to_team_id`, divisions, conferences, seasons), so direction is the same on the arrival and the departure. Null when the movement has no transfer edge.",
+    )
     transfer_id: int | None = Field(
         None,
-        description="Transfer edge minted by this movement (players).",
+        description="Transfer edge behind this movement (players): the one the arrival minted, which a departure shares with it.",
         title="Transfer Id",
     )
 
@@ -4934,11 +5079,20 @@ class SchoolDetail(BaseModel):
         description="The school's official athletics website domain (the source of its program data).",
         title="Athletics Domain",
     )
-    city: str | None = Field(None, title="City")
+    city: str | None = Field(
+        None,
+        description="City of the campus that fields the school's teams. Null when the school is not placed, or when its program plays on several campuses and none is its home.",
+        title="City",
+    )
     control: str | None = Field(
         None,
         description="Institutional control, e.g. 'Public' or 'Private nonprofit'.",
         title="Control",
+    )
+    country: str | None = Field(
+        None,
+        description="ISO 3166-1 alpha-2 country code: 'US' (territories included) or 'CA'. Null when the school is not placed. Held for schools with no federal record too.",
+        title="Country",
     )
     id: int = Field(
         ..., description="School id; use with GET /v1/schools/{school_id}.", title="Id"
@@ -4955,7 +5109,9 @@ class SchoolDetail(BaseModel):
     )
     slug: str | None = Field(None, description="Stable school slug.", title="Slug")
     state: str | None = Field(
-        None, description="Two-letter US state code, when known.", title="State"
+        None,
+        description="Two-letter code: a US state, DC or territory (USPS, e.g. 'PR'), or a Canadian province (e.g. 'BC'). Null when the school is not placed.",
+        title="State",
     )
     teams: list[SchoolTeamRef] | None = Field(None, title="Teams")
 

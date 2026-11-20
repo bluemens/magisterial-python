@@ -168,6 +168,23 @@ staff = client.teams.coaches(
 `client.athletes.list()`, `.get()`, `.resend_invite()`, `.revoke()`, and
 `.list_access()` manage the grant lifecycle and its audit log.
 
+## Listing by place
+
+Every school carries `country` (`US`, territories included, or `CA`), `state`
+(USPS or Canadian province code) and `city`, including schools with no federal
+record. Filter lists by them:
+
+```python
+us_programs = client.teams.list(
+    sport="soccer", gender="women", division="D1,D2,D3,NAIA,NJCAA-D1",
+    status="active", country="US",
+)
+```
+
+`teams.list`, `schools.list`, `movements.list` and `commitments.list` take
+`country`, `country_not`, `state`, `state_not` (and `city` on teams and
+schools).
+
 ## School discovery
 
 ```python
