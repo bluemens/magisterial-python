@@ -2611,6 +2611,298 @@ class RecordCounts(BaseModel):
     wins: int = Field(..., title="Wins")
 
 
+class RecruitFitAthlete(BaseModel):
+    """
+    The answers as they were read.
+    """
+
+    club_league: str | None = Field(
+        None,
+        description="The league code read for the athlete's season.",
+        title="Club League",
+    )
+    club_league_tier: int | None = Field(
+        None,
+        description="1 is the national top flight for the gender.",
+        title="Club League Tier",
+    )
+    grad_year: int = Field(..., title="Grad Year")
+    home_state: str | None = Field(None, title="Home State")
+    position: str | None = Field(None, title="Position")
+    position_group: str = Field(
+        ...,
+        description="GK, DEF, MID, FWD, or ALL without a position.",
+        title="Position Group",
+    )
+    sport_path: str = Field(..., title="Sport Path")
+
+
+class Key(Enum):
+    """
+    room: expected openings at the position. pipeline: recruits and roster from the athlete's state, region and league. preferences: nearness to home. level: the athlete's league against the program's recent recruits. stability: coach tenure, first-year minutes and portal reliance.
+    """
+
+    room = "room"
+    pipeline = "pipeline"
+    preferences = "preferences"
+    level = "level"
+    stability = "stability"
+
+
+class RecruitFitComponent(BaseModel):
+    """
+    One weighted part of the fit.
+    """
+
+    key: Key = Field(
+        ...,
+        description="room: expected openings at the position. pipeline: recruits and roster from the athlete's state, region and league. preferences: nearness to home. level: the athlete's league against the program's recent recruits. stability: coach tenure, first-year minutes and portal reliance.",
+        title="Key",
+    )
+    measured: bool = Field(
+        ...,
+        description="False when the data is missing and the part is neutral (0.5).",
+        title="Measured",
+    )
+    score: float = Field(
+        ...,
+        description="0 to 1 against the other programs; higher is better.",
+        title="Score",
+    )
+    weight: float = Field(..., description="Its share of the fit.", title="Weight")
+
+
+class RecruitFitLevel(BaseModel):
+    """
+    The athlete's league against the program's recent recruits.
+    """
+
+    above: float | None = Field(None, description="Share a level above.", title="Above")
+    below: float | None = Field(None, description="Share a level below.", title="Below")
+    measured: bool = Field(
+        ...,
+        description="False unless the athlete's league and 2+ of the program's recruits' are known.",
+        title="Measured",
+    )
+    percentile: float | None = Field(None, title="Percentile")
+    same: float | None = Field(
+        None,
+        description="Share of recruits at the athlete's league level.",
+        title="Same",
+    )
+
+
+class RecruitFitMustHave(BaseModel):
+    excluded: int = Field(..., description="Programs that fail it.", title="Excluded")
+    must_have: str = Field(..., title="Must Have")
+    unknown_excluded: int = Field(
+        ...,
+        description="Programs left out because the data to judge them is missing.",
+        title="Unknown Excluded",
+    )
+
+
+class MustHave(Enum):
+    division = "division"
+    region = "region"
+    major = "major"
+    distance = "distance"
+    cost = "cost"
+
+
+class Position(Enum):
+    """
+    Without one, roster room is read for the whole roster.
+    """
+
+    GK = "GK"
+    CB = "CB"
+    FB = "FB"
+    WB = "WB"
+    DM = "DM"
+    CM = "CM"
+    AM = "AM"
+    W = "W"
+    F = "F"
+    DEF = "DEF"
+    MID = "MID"
+    FWD = "FWD"
+
+
+class SportPath(Enum):
+    """
+    Soccer only for now.
+    """
+
+    womens_soccer = "womens-soccer"
+    mens_soccer = "mens-soccer"
+
+
+class TargetDivision(Enum):
+    D1 = "D1"
+    D2 = "D2"
+    D3 = "D3"
+    NAIA = "NAIA"
+    NJCAA = "NJCAA"
+
+
+class TargetRegion(Enum):
+    northeast = "northeast"
+    south = "south"
+    midwest = "midwest"
+    west = "west"
+
+
+TeamIds = TypeAliasType(
+    "TeamIds",
+    Annotated[
+        list[int],
+        Field(
+            description="Return only these programs, each with its fit against the whole field, including one your targets or must-haves leave out (`in_ranking` false, `rank` null).",
+            max_length=500,
+            min_length=1,
+            title="Team Ids",
+        ),
+    ],
+)
+
+
+class RecruitFitRequest(BaseModel):
+    """
+    One soccer athlete's answers. It takes no name, email or other
+    identity, and nothing is saved beyond your own request log.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    club_league: constr(max_length=60) | None = Field(
+        None,
+        description="Youth league, by code or full name: ECNL, ECNL RL, GA, GA ASPIRE, MLS NEXT, MLS NEXT AD, N1, DPL, EDP, EA, USL ACADEMY. NPL, USYS NL, USYS NL PRO and E64 are read as N1 from 2026-27. Without one, club level is neutral.",
+        examples=["ECNL"],
+        title="Club League",
+    )
+    cursor: str | None = Field(None, title="Cursor")
+    grad_year: conint(ge=2020, le=2040) = Field(
+        ...,
+        description="High school class; the fall the athlete enters college. A class the scores do not cover is a 400 that lists the ones they do.",
+        examples=[2028],
+        title="Grad Year",
+    )
+    home_state: str | None = Field(
+        None,
+        description="Two-letter US state. Without one, pipeline and distance are neutral for every program, and the ranking is much weaker.",
+        examples=["MN"],
+        title="Home State",
+    )
+    intended_major: constr(max_length=80) | None = Field(
+        None,
+        description="Used by the `major` must-have, against the school's most common fields of study.",
+        title="Intended Major",
+    )
+    limit: conint(ge=1, le=500) | None = Field(25, title="Limit")
+    max_annual_cost_usd: conint(ge=0, le=150000) | None = Field(
+        None,
+        description="Used by the `cost` must-have, against the school's average net price.",
+        title="Max Annual Cost Usd",
+    )
+    max_distance_miles: conint(ge=10, le=3000) | None = Field(
+        None,
+        description="Used by the `distance` must-have, measured from the home state's population center.",
+        title="Max Distance Miles",
+    )
+    must_haves: list[MustHave] | None = Field(
+        None,
+        description="Hard filters. Each needs its answer in this request (target_divisions, target_regions, intended_major, max_distance_miles, max_annual_cost_usd). A program the filter cannot judge is left out and counted in `must_haves`.",
+        title="Must Haves",
+    )
+    position: Position | None = Field(
+        None,
+        description="Without one, roster room is read for the whole roster.",
+        title="Position",
+    )
+    sport_path: SportPath = Field(
+        ..., description="Soccer only for now.", title="Sport Path"
+    )
+    target_divisions: list[TargetDivision] | None = Field(
+        None,
+        description="Rank only these divisions. Does not change a program's fit.",
+        title="Target Divisions",
+    )
+    target_regions: list[TargetRegion] | None = Field(
+        None,
+        description="Rank only these regions. Does not change a program's fit.",
+        title="Target Regions",
+    )
+    team_ids: TeamIds | None = Field(
+        None,
+        description="Return only these programs, each with its fit against the whole field, including one your targets or must-haves leave out (`in_ranking` false, `rank` null).",
+        title="Team Ids",
+    )
+
+
+class RecruitFitRetention(BaseModel):
+    """
+    The program's high school recruits still on the roster in year two.
+    Shown beside the fit; it is not part of it.
+    """
+
+    arrival_seasons: list[int] = Field(
+        ...,
+        description="First and last arrival season measured.",
+        title="Arrival Seasons",
+    )
+    quartile: int | None = Field(
+        None, description="1 (bottom) to 4 (top) within the division.", title="Quartile"
+    )
+    recruits: int = Field(..., title="Recruits")
+    share: float | None = Field(
+        None, description="Null with fewer than 5 recruits measured.", title="Share"
+    )
+
+
+class RecruitFitRoom(BaseModel):
+    """
+    Expected openings at the athlete's position for their entering class.
+    """
+
+    commitment_coverage: float | None = Field(
+        None,
+        description="The share of the division's high school recruits the commitment lists hold.",
+        title="Commitment Coverage",
+    )
+    commitments_counted: int = Field(
+        ...,
+        description="How many of them were subtracted: all where the division's lists are complete enough to trust (`commitment_coverage` at least 0.3), otherwise none.",
+        title="Commitments Counted",
+    )
+    entering_class: int = Field(..., title="Entering Class")
+    expected_openings: float | None = Field(
+        None, description="Null without a roster to count.", title="Expected Openings"
+    )
+    known_commitments: int = Field(
+        ...,
+        description="Known commitments to this class at this position.",
+        title="Known Commitments",
+    )
+    no_opening: bool = Field(
+        ...,
+        description="Under half an opening expected; ranked below every program with one.",
+        title="No Opening",
+    )
+    seniors_leaving: int | None = Field(None, title="Seniors Leaving")
+    transfers_in: float = Field(
+        ...,
+        description="Its usual transfers in to the position in a year.",
+        title="Transfers In",
+    )
+    transfers_out: float = Field(
+        ...,
+        description="The program's usual transfers out of the position in a year.",
+        title="Transfers Out",
+    )
+
+
 class SandboxEventAlert(BaseModel):
     alert_id: str = Field(..., title="Alert Id")
     matched: bool = Field(..., title="Matched")
@@ -4948,6 +5240,41 @@ class PortalSupplyChangePage(BaseModel):
     )
 
 
+class RecruitFitProgram(BaseModel):
+    """
+    One program scored for the athlete.
+    """
+
+    avg_net_price: int | None = Field(None, title="Avg Net Price")
+    city: str | None = Field(None, title="City")
+    components: list[RecruitFitComponent] = Field(..., title="Components")
+    conference: str | None = Field(None, title="Conference")
+    division: str | None = Field(None, title="Division")
+    fit: int = Field(
+        ...,
+        description="0 to 100, relative to every program in the sport for this class and position. Not a probability of a roster spot or an offer.",
+        title="Fit",
+    )
+    in_ranking: bool = Field(..., title="In Ranking")
+    level: RecruitFitLevel
+    logo_url: str | None = Field(None, title="Logo Url")
+    miles_from_home_state: int | None = Field(None, title="Miles From Home State")
+    rank: int | None = Field(
+        None,
+        description="1 is the best fit among the programs ranked. Null when targets or must-haves leave it out.",
+        title="Rank",
+    )
+    region: str | None = Field(None, title="Region")
+    retention: RecruitFitRetention
+    room: RecruitFitRoom
+    school_id: int | None = Field(None, title="School Id")
+    state: str | None = Field(None, title="State")
+    team: str | None = Field(None, title="Team")
+    team_id: int = Field(
+        ..., description="The program: GET /v1/teams/{team_id}.", title="Team Id"
+    )
+
+
 class RosterEntry(BaseModel):
     """
     A roster member — identity only, no contact fields.
@@ -5692,6 +6019,46 @@ class PlayerSummary(BaseModel):
     )
     track: TrackSummary | None = Field(
         None, description="Track and field athletes only."
+    )
+
+
+class RecruitFitPage(BaseModel):
+    """
+    Programs in rank order, with what the ranking was built from.
+    """
+
+    athlete: RecruitFitAthlete
+    built_at: AwareDatetime | None = Field(
+        None,
+        description="When the oldest program input was built (hourly).",
+        title="Built At",
+    )
+    data: list[RecruitFitProgram] = Field(..., title="Data")
+    has_more: bool | None = Field(
+        False, description="True when another page is available.", title="Has More"
+    )
+    missing: list[str] = Field(
+        ..., description="Answers that would sharpen the scores.", title="Missing"
+    )
+    must_haves: list[RecruitFitMustHave] = Field(..., title="Must Haves")
+    next_cursor: str | None = Field(
+        None,
+        description="Opaque cursor for the next page; null when there are no more results.",
+        examples=["eyJvZmZzZXQiOiAyNX0="],
+        title="Next Cursor",
+    )
+    programs_in_field: int = Field(
+        ...,
+        description="Every program in the sport for this class and position.",
+        title="Programs In Field",
+    )
+    ranked: int = Field(
+        ...,
+        description="Programs that pass the targets and must-haves.",
+        title="Ranked",
+    )
+    unknown_team_ids: list[int] | None = Field(
+        None, description="Requested ids not in the field.", title="Unknown Team Ids"
     )
 
 

@@ -253,3 +253,14 @@ def test_create_sandbox_event_returns_its_model():
     result = sync_client(rec).sandbox.create_event(type="coach_movement", sport="basketball", division="D3")
     assert isinstance(result, types.SandboxEventResponse)
     assert rec.requests[0].method == "POST"
+
+
+def test_recruit_fit_posts_the_answers_and_parses_the_page():
+    rec = Recorder(minimal(types.RecruitFitPage))
+    result = sync_client(rec).recruit_fit.score(
+        sport_path="womens-soccer", grad_year=2028, position="CM", home_state="MN",
+        club_league="ECNL", team_ids=[3, 4],
+    )
+    method, path, query = rec.last
+    assert (method, path, query) == ("POST", "/v1/recruit/fit", {})
+    assert isinstance(result, types.RecruitFitPage)

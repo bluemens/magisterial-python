@@ -56,6 +56,13 @@ changes = client.commitments.changes(since="2026-11-01T00:00:00Z")
 supply = client.portal_supply.list(sport="soccer", gender="women", division="D1")
 supply_changes = client.portal_supply.changes(since="2026-11-01T00:00:00Z")
 
+# Recruit fit: score a soccer athlete against every program (Developer Pro and up)
+fit = client.recruit_fit.score(
+    sport_path="womens-soccer", grad_year=2028, position="CM",
+    home_state="MN", club_league="ECNL", target_divisions=["D1", "D2"],
+)
+print(fit.data[0].team, fit.data[0].fit)
+
 # Natural-language query (usage-billed): submit and wait for the answer
 run = client.query.create_and_poll(
     prompt="Who led the NESCAC in assists this season?",
