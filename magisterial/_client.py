@@ -115,6 +115,7 @@ class Magisterial:
         from .resources.portal import Portal
         from .resources.portal_supply import PortalSupply
         from .resources.query import Query
+        from .resources.recruit_fit import RecruitFit
         from .resources.reference import Reference
         from .resources.sandbox import Sandbox
         from .resources.schools import Schools
@@ -131,6 +132,7 @@ class Magisterial:
         self.games = Games(self)
         self.portal = Portal(self)
         self.portal_supply = PortalSupply(self)
+        self.recruit_fit = RecruitFit(self)
         self.query = Query(self)
         self.alerts = Alerts(self)
         self.exports = Exports(self)
@@ -245,6 +247,7 @@ class AsyncMagisterial:
         from .resources.portal import AsyncPortal
         from .resources.portal_supply import AsyncPortalSupply
         from .resources.query import AsyncQuery
+        from .resources.recruit_fit import AsyncRecruitFit
         from .resources.reference import AsyncReference
         from .resources.sandbox import AsyncSandbox
         from .resources.schools import AsyncSchools
@@ -261,6 +264,7 @@ class AsyncMagisterial:
         self.games = AsyncGames(self)
         self.portal = AsyncPortal(self)
         self.portal_supply = AsyncPortalSupply(self)
+        self.recruit_fit = AsyncRecruitFit(self)
         self.query = AsyncQuery(self)
         self.alerts = AsyncAlerts(self)
         self.exports = AsyncExports(self)
