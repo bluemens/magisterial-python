@@ -498,6 +498,11 @@ class ExportCreateRequest(BaseModel):
         description="Conference filter (players/teams/coaches).",
         title="Conference",
     )
+    country: str | None = Field(
+        None,
+        description="School country filter (players/teams/coaches). Comma-separated ISO two-letter codes. US includes territories, as on GET /v1/teams.",
+        title="Country",
+    )
     dataset: str = Field(
         ..., description="'players' | 'teams' | 'games' | 'coaches'.", title="Dataset"
     )
@@ -515,6 +520,11 @@ class ExportCreateRequest(BaseModel):
         None,
         description="'men' or 'women'. Defaults to 'men' for a sport with both; ignored for single-gender sports.",
         title="Gender",
+    )
+    include_contacts: bool | None = Field(
+        False,
+        description="Coaches only. Developer Pro or Developer Ultra and the coach.contact.directory_read key scope are required. Adds published email and phone for coaching staff in the latest season held per active program. Omit season.",
+        title="Include Contacts",
     )
     region: str | None = Field(
         None,

@@ -326,20 +326,27 @@ def test_export_create_and_poll(monkeypatch):
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.method == "POST":
+            assert json.loads(request.content) == {
+                "dataset": "coaches", "sport": "soccer", "division": "D1,D3",
+                "country": "US", "include_contacts": True,
+            }
             return json_response(202, {"export_id": "e1", "status": "queued"})
         return json_response(
             200,
             {
                 "export_id": "e1",
                 "status": next(statuses),
-                "dataset": "players",
+                "dataset": "coaches",
                 "format": "csv",
                 "download_url": "https://example.com/f.csv.gz",
             },
         )
 
     client = make_client(handler)
-    job = client.exports.create_and_poll(dataset="players", sport="soccer", division="D3")
+    job = client.exports.create_and_poll(
+        dataset="coaches", sport="soccer", division="D1,D3", country="US",
+        include_contacts=True,
+    )
     assert job.status == "succeeded"
     assert job.download_url is not None
 
@@ -629,6 +636,29 @@ def test_athletes_list_access_paginates():
 
 
 # -- async parity ----------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_async_coach_contact_export():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            assert json.loads(request.content)["country"] == "US"
+            assert json.loads(request.content)["include_contacts"] is True
+            return json_response(202, {"export_id": "e1", "status": "queued"})
+        return json_response(
+            200, {"export_id": "e1", "dataset": "coaches", "format": "csv", "status": "succeeded"}
+        )
+
+    transport = httpx.MockTransport(handler)
+    client = magisterial.AsyncMagisterial(
+        api_key=API_KEY, http_client=httpx.AsyncClient(transport=transport)
+    )
+    job = await client.exports.create_and_poll(
+        dataset="coaches", sport="soccer", division="D1,D3", country="US",
+        include_contacts=True,
+    )
+    assert job.status == "succeeded"
+    await client.close()
 
 
 @pytest.mark.anyio
