@@ -24,6 +24,10 @@ def _create_body(
     gender: Optional[str],
     season: Optional[str],
     conference: Optional[str],
+    country: Optional[str],
+    status: Optional[str],
+    staff_category: Optional[str],
+    include_contacts: Optional[bool],
 ) -> dict:
     body = {"dataset": dataset, "sport": sport, "division": division}
     for key, value in (
@@ -31,6 +35,10 @@ def _create_body(
         ("gender", gender),
         ("season", season),
         ("conference", conference),
+        ("country", country),
+        ("status", status),
+        ("staff_category", staff_category),
+        ("include_contacts", include_contacts),
     ):
         if value is not None:
             body[key] = value
@@ -51,13 +59,20 @@ class Exports:
         gender: Optional[str] = None,
         season: Optional[str] = None,
         conference: Optional[str] = None,
+        country: Optional[str] = None,
+        status: Optional[str] = None,
+        staff_category: Optional[str] = None,
+        include_contacts: Optional[bool] = None,
     ) -> ExportCreateResponse:
         """Submit an export job (one dataset in one scope, gzipped flat file).
         Billed by result size once it finishes; not retried automatically."""
         raw = self._client.request(
             "POST",
             "/v1/exports",
-            json=_create_body(dataset, sport, division, format, gender, season, conference),
+            json=_create_body(
+                dataset, sport, division, format, gender, season, conference,
+                country, status, staff_category, include_contacts,
+            ),
         )
         return ExportCreateResponse.model_validate(raw)
 
@@ -90,6 +105,10 @@ class Exports:
         gender: Optional[str] = None,
         season: Optional[str] = None,
         conference: Optional[str] = None,
+        country: Optional[str] = None,
+        status: Optional[str] = None,
+        staff_category: Optional[str] = None,
+        include_contacts: Optional[bool] = None,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
         timeout: float = DEFAULT_POLL_TIMEOUT,
     ) -> ExportJobStatus:
@@ -100,6 +119,8 @@ class Exports:
         created = self.create(
             dataset=dataset, sport=sport, division=division, format=format,
             gender=gender, season=season, conference=conference,
+            country=country, status=status, staff_category=staff_category,
+            include_contacts=include_contacts,
         )
         deadline = time.monotonic() + timeout
         job = self.get(created.export_id)
@@ -125,13 +146,20 @@ class AsyncExports:
         gender: Optional[str] = None,
         season: Optional[str] = None,
         conference: Optional[str] = None,
+        country: Optional[str] = None,
+        status: Optional[str] = None,
+        staff_category: Optional[str] = None,
+        include_contacts: Optional[bool] = None,
     ) -> ExportCreateResponse:
         """Submit an export job (one dataset in one scope, gzipped flat file).
         Billed by result size once it finishes; not retried automatically."""
         raw = await self._client.request(
             "POST",
             "/v1/exports",
-            json=_create_body(dataset, sport, division, format, gender, season, conference),
+            json=_create_body(
+                dataset, sport, division, format, gender, season, conference,
+                country, status, staff_category, include_contacts,
+            ),
         )
         return ExportCreateResponse.model_validate(raw)
 
@@ -164,6 +192,10 @@ class AsyncExports:
         gender: Optional[str] = None,
         season: Optional[str] = None,
         conference: Optional[str] = None,
+        country: Optional[str] = None,
+        status: Optional[str] = None,
+        staff_category: Optional[str] = None,
+        include_contacts: Optional[bool] = None,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
         timeout: float = DEFAULT_POLL_TIMEOUT,
     ) -> ExportJobStatus:
@@ -176,6 +208,8 @@ class AsyncExports:
         created = await self.create(
             dataset=dataset, sport=sport, division=division, format=format,
             gender=gender, season=season, conference=conference,
+            country=country, status=status, staff_category=staff_category,
+            include_contacts=include_contacts,
         )
         loop = asyncio.get_event_loop()
         deadline = loop.time() + timeout
