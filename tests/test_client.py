@@ -328,7 +328,8 @@ def test_export_create_and_poll(monkeypatch):
         if request.method == "POST":
             assert json.loads(request.content) == {
                 "dataset": "coaches", "sport": "soccer", "division": "D1,D3",
-                "country": "US", "include_contacts": True,
+                "country": "US", "include_contacts": True, "status": "active",
+                "season": "latest", "staff_category": "coach",
             }
             return json_response(202, {"export_id": "e1", "status": "queued"})
         return json_response(
@@ -345,7 +346,7 @@ def test_export_create_and_poll(monkeypatch):
     client = make_client(handler)
     job = client.exports.create_and_poll(
         dataset="coaches", sport="soccer", division="D1,D3", country="US",
-        include_contacts=True,
+        include_contacts=True, status="active", season="latest", staff_category="coach",
     )
     assert job.status == "succeeded"
     assert job.download_url is not None
@@ -644,6 +645,7 @@ async def test_async_coach_contact_export():
         if request.method == "POST":
             assert json.loads(request.content)["country"] == "US"
             assert json.loads(request.content)["include_contacts"] is True
+            assert json.loads(request.content)["staff_category"] == "coach"
             return json_response(202, {"export_id": "e1", "status": "queued"})
         return json_response(
             200, {"export_id": "e1", "dataset": "coaches", "format": "csv", "status": "succeeded"}
@@ -655,7 +657,7 @@ async def test_async_coach_contact_export():
     )
     job = await client.exports.create_and_poll(
         dataset="coaches", sport="soccer", division="D1,D3", country="US",
-        include_contacts=True,
+        include_contacts=True, staff_category="coach",
     )
     assert job.status == "succeeded"
     await client.close()

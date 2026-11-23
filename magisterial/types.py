@@ -523,7 +523,7 @@ class ExportCreateRequest(BaseModel):
     )
     include_contacts: bool | None = Field(
         False,
-        description="Coaches only. Developer Pro or Developer Ultra and the coach.contact.directory_read key scope are required. Adds published email and phone for coaching staff in the latest season held per active program. Omit season.",
+        description="Coaches only. Developer Pro or Developer Ultra and the coach.contact.directory_read key scope are required. Appends the coach's published email and phone to the rows selected by the filters.",
         title="Include Contacts",
     )
     region: str | None = Field(
@@ -533,11 +533,21 @@ class ExportCreateRequest(BaseModel):
     )
     season: str | None = Field(
         None,
-        description="Season filter (championship year, e.g. '2025').",
+        description="Season filter (championship year, e.g. '2025'). Coach exports also accept 'latest' for the latest staff season held per program.",
         title="Season",
     )
     sport: str = Field(
         ..., description="e.g. 'soccer', 'basketball', 'baseball'.", title="Sport"
+    )
+    staff_category: str | None = Field(
+        None,
+        description="Coaches only. Comma-separated staff categories: coach, program_staff, support_staff, not_staff, unclassified, unknown.",
+        title="Staff Category",
+    )
+    status: str | None = Field(
+        None,
+        description="Program status filter (players/teams/coaches): 'active', 'discontinued' or 'all' (default).",
+        title="Status",
     )
 
 
